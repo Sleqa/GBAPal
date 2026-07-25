@@ -44,6 +44,16 @@ android {
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+        // Private test builds (beta-test-release.yml) use this instead of release.
+        // The applicationIdSuffix gives it a different package name (same signing
+        // key is fine -- Android only cares about signature-matching for updates
+        // to the SAME package), so it installs as a separate app alongside the
+        // public build instead of overwriting it.
+        create("beta") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".test"
+            resValue("string", "app_name", "GBA Pal (Test)")
+        }
     }
 
     compileOptions {
@@ -57,6 +67,7 @@ android {
 
     buildFeatures {
         compose = true
+        resValues = true
     }
 }
 

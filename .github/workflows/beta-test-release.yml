@@ -41,17 +41,17 @@ jobs:
           echo "code=$(( 100000 + ${{ github.run_number }} ))" >> "$GITHUB_OUTPUT"
           echo "name=1.0.0-test.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
-      - name: Build release APK
+      - name: Build test APK
         env:
           APP_VERSION_CODE: ${{ steps.version.outputs.code }}
           APP_VERSION_NAME: ${{ steps.version.outputs.name }}
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleBeta
 
       - name: Rename APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk \
-             dist/GBAPal-v${{ steps.version.outputs.name }}.apk
+          cp app/build/outputs/apk/beta/app-beta.apk \
+             dist/GBAPal-Test-v${{ steps.version.outputs.name }}.apk
 
       - name: Create draft GitHub release (hidden from the public)
         uses: softprops/action-gh-release@v2
@@ -61,6 +61,9 @@ jobs:
           body: |
             Private test build, not for distribution. Triggered manually,
             kept as a draft release so it stays off the public releases page.
+            Installs as a separate app ("GBA Pal (Test)", package
+            com.gbapal.companion.test) alongside the public build, so it
+            won't overwrite or conflict with it.
           draft: true
           prerelease: true
           make_latest: false
