@@ -13,7 +13,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = (System.getenv("APP_VERSION_CODE") ?: "1").toInt()
-        versionName = System.getenv("APP_VERSION_NAME") ?: "0.1.0"
+        versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.0"
     }
 
     // A fixed signing key so Obtainium/sideload updates install in place instead of
@@ -21,6 +21,14 @@ android {
     // it exists only to keep the signature stable across CI builds for this personal
     // project. Credentials can be overridden via Gradle properties if you later swap
     // in a private keystore.
+    //
+    // The "unboundds" alias/password default below are NOT app branding -- they're
+    // the literal identity baked into keystore/release.keystore (confirmed via
+    // `keytool -list`). They're left alone deliberately: renaming the property
+    // defaults without regenerating the keystore would just fail to find the
+    // alias, and regenerating it would change the signing key, breaking in-place
+    // Obtainium updates for anyone who already installed a build signed with the
+    // current key. Cosmetic naming here isn't worth that.
     signingConfigs {
         create("release") {
             storeFile = rootProject.file(project.findProperty("releaseStoreFile") as? String ?: "keystore/release.keystore")

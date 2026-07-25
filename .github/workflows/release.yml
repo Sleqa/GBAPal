@@ -22,8 +22,13 @@ jobs:
       - name: Set version
         id: version
         run: |
+          # v1.0.0 was the first public beta, built by this workflow's run
+          # #77 -- patch counts up from 0 from that point so future public
+          # betas read as 1.0.1, 1.0.2, etc. instead of jumping straight to
+          # a run-number-sized patch version.
+          patch=$(( ${{ github.run_number }} - 77 ))
           echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-          echo "name=0.1.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "name=1.0.${patch}" >> "$GITHUB_OUTPUT"
 
       - name: Build release APK
         env:
@@ -35,11 +40,16 @@ jobs:
         run: |
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk \
-             dist/UnboundDS-companion-v${{ steps.version.outputs.name }}.apk
+             dist/GBAPal-v${{ steps.version.outputs.name }}.apk
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.name }}
-          name: v${{ steps.version.outputs.name }}
+          name: GBA Pal v${{ steps.version.outputs.name }} (Beta)
+          body: |
+            Public beta build, published automatically from the `main` branch.
+          draft: false
+          prerelease: false
+          make_latest: true
           files: dist/*.apk
