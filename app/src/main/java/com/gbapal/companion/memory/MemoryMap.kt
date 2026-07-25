@@ -37,6 +37,13 @@ data class MemoryMap(
      * [u16 decompressed size][u16 tag]. Null until discovered for a profile.
      */
     val frontSpriteTable: PartyLayout? = null,
+    /**
+     * Per-species palette pointer table: address for species N is
+     * firstSlotAddress + N * slotStride. Each 8-byte slot is
+     * [4-byte little-endian ROM pointer to LZ77-compressed 16-color
+     * palette][u16 tag][u16 unused]. Null until discovered for a profile.
+     */
+    val paletteTable: PartyLayout? = null,
 ) {
     companion object {
         private fun parseLayout(obj: JSONObject): PartyLayout = PartyLayout(
@@ -58,6 +65,7 @@ data class MemoryMap(
             val overworldObjects = parseLayout(root.getJSONObject("overworldObjects"))
             val scriptVars = parseLayout(root.getJSONObject("scriptVars"))
             val frontSpriteTable = root.optJSONObject("frontSpriteTable")?.let { parseLayout(it) }
+            val paletteTable = root.optJSONObject("paletteTable")?.let { parseLayout(it) }
 
             val anchorsArr = root.getJSONArray("anchors")
             val anchors = (0 until anchorsArr.length()).map { i ->
@@ -81,6 +89,7 @@ data class MemoryMap(
                 scriptVars = scriptVars,
                 anchors = anchors,
                 frontSpriteTable = frontSpriteTable,
+                paletteTable = paletteTable,
             )
         }
     }
