@@ -2,8 +2,8 @@ package com.gbapal.companion.ui.detail
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,15 +16,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.platform.LocalContext
@@ -36,14 +33,13 @@ import com.gbapal.companion.pokemon.NameTables
 import com.gbapal.companion.pokemon.SpriteAssets
 import com.gbapal.companion.ui.hub.HubMon
 import com.gbapal.companion.ui.theme.MonoAccent
-import com.gbapal.companion.ui.theme.MonoAccentGlow
 import com.gbapal.companion.ui.theme.MonoBg
 import com.gbapal.companion.ui.theme.MonoLabel
 import com.gbapal.companion.ui.theme.MonoText
 import com.gbapal.companion.ui.theme.MonoTextMuted
 import com.gbapal.companion.ui.theme.PixelHpBar
 
-/** Full-screen Mono-styled summary for one party Pokemon: stats, moveset+PP, item, ability. */
+/** Full-screen Mono-styled summary for one party Pokemon: stats, moveset+PP, item, ability. No frames or borders -- sections are separated by whitespace and headers alone. */
 @Composable
 fun PokemonDetailScreen(
     mon: HubMon,
@@ -66,7 +62,7 @@ fun PokemonDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MonoBg)
-            .padding(14.dp)
+            .padding(18.dp)
             .verticalScroll(rememberScrollState()),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -76,128 +72,108 @@ fun PokemonDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    MonoLabel(displayName.uppercase(), color = MonoText, fontSize = 14.sp)
+                    MonoLabel(displayName.uppercase(), color = MonoText, fontSize = 20.sp)
                     types.forEach { type ->
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         TypeBadge(type)
                     }
                 }
                 CloseButton(onClose)
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(84.dp)
-                        .shadow(elevation = 4.dp, shape = CircleShape, ambientColor = MonoAccentGlow, spotColor = MonoAccentGlow)
-                        .clip(CircleShape)
-                        .background(MonoBg)
-                        .border(1.dp, MonoAccent, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (sprite != null) {
-                        Image(
-                            bitmap = sprite,
-                            contentDescription = null,
-                            filterQuality = FilterQuality.None,
-                            modifier = Modifier.size(72.dp),
-                        )
-                    } else {
-                        MonoLabel("?", color = MonoText, fontSize = 20.sp)
+                if (sprite != null) {
+                    Image(
+                        bitmap = sprite,
+                        contentDescription = null,
+                        filterQuality = FilterQuality.None,
+                        modifier = Modifier.size(88.dp),
+                    )
+                } else {
+                    Box(modifier = Modifier.size(88.dp), contentAlignment = Alignment.Center) {
+                        MonoLabel("?", color = MonoText, fontSize = 24.sp)
                     }
                 }
 
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(18.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    MonoLabel("Lv ${mon.level}", color = MonoText, fontSize = 10.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
+                    MonoLabel("Lv ${mon.level}", color = MonoText, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
                     MonoLabel(
                         "Item: ${names.itemName(mon.heldItemId)}   Ability: ${names.abilityName(mon.abilityId)}",
                         color = MonoTextMuted,
-                        fontSize = 8.sp,
+                        fontSize = 11.sp,
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     PixelHpBar(
                         fraction = if (mon.maxHp > 0) mon.currentHp.toFloat() / mon.maxHp else 0f,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    MonoLabel("HP ${mon.currentHp}/${mon.maxHp}", color = MonoText, fontSize = 9.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    MonoLabel("HP ${mon.currentHp}/${mon.maxHp}", color = MonoText, fontSize = 13.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            MonoBgBox {
-                Column {
-                    MonoLabel("STATS", color = MonoTextMuted, fontSize = 9.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    StatsRow(
-                        listOf(
-                            "ATK" to mon.attack,
-                            "DEF" to mon.defense,
-                            "SPD" to mon.speed,
-                            "SP.ATK" to mon.spAttack,
-                            "SP.DEF" to mon.spDefense,
-                        ),
-                    )
-                }
-            }
+            MonoLabel("STATS", color = MonoTextMuted, fontSize = 13.sp)
+            Spacer(modifier = Modifier.height(12.dp))
+            StatsRow(
+                listOf(
+                    "ATK" to mon.attack,
+                    "DEF" to mon.defense,
+                    "SPD" to mon.speed,
+                    "SP.ATK" to mon.spAttack,
+                    "SP.DEF" to mon.spDefense,
+                ),
+            )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            MonoBgBox {
-                Column {
-                    MonoLabel("MOVES", color = MonoTextMuted, fontSize = 9.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    val rows = mon.moves.mapIndexed { i, moveId -> moveId to mon.pp.getOrElse(i) { 0 } }.chunked(2)
-                    rows.forEachIndexed { rowIndex, rowSlots ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            rowSlots.forEach { (moveId, pp) ->
-                                if (moveId != 0) {
-                                    MoveCard(
-                                        name = names.moveName(moveId),
-                                        type = moveData.type(moveId),
-                                        pp = pp,
-                                        ppMax = moveData.ppMax(moveId),
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
+            MonoLabel("MOVES", color = MonoTextMuted, fontSize = 13.sp)
+            Spacer(modifier = Modifier.height(12.dp))
+            val rows = mon.moves.mapIndexed { i, moveId -> moveId to mon.pp.getOrElse(i) { 0 } }.chunked(2)
+            rows.forEachIndexed { rowIndex, rowSlots ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    rowSlots.forEach { (moveId, pp) ->
+                        if (moveId != 0) {
+                            MoveCard(
+                                name = names.moveName(moveId),
+                                type = moveData.type(moveId),
+                                pp = pp,
+                                ppMax = moveData.ppMax(moveId),
+                                modifier = Modifier.weight(1f),
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
-                        if (rowIndex != rows.lastIndex) Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
+                if (rowIndex != rows.lastIndex) Spacer(modifier = Modifier.height(12.dp))
             }
 
+            Spacer(modifier = Modifier.height(28.dp))
+
+            MonoLabel("WEAKNESSES", color = MonoTextMuted, fontSize = 13.sp)
             Spacer(modifier = Modifier.height(10.dp))
+            TypeBadgeRow(weaknesses)
+            Spacer(modifier = Modifier.height(18.dp))
+            MonoLabel("RESISTS", color = MonoTextMuted, fontSize = 13.sp)
+            Spacer(modifier = Modifier.height(10.dp))
+            TypeBadgeRow(resists)
 
-            MonoBgBox {
-                Column {
-                    MonoLabel("WEAKNESSES", color = MonoTextMuted, fontSize = 9.sp)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    TypeBadgeRow(weaknesses)
-                    Spacer(modifier = Modifier.height(10.dp))
-                    MonoLabel("RESISTS", color = MonoTextMuted, fontSize = 9.sp)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    TypeBadgeRow(resists)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(18.dp))
         }
     }
 }
 
-/** All stats spread evenly across the panel's full width, each as a compact label/value pair. */
+/** All stats spread evenly across the full width, each as a compact label/value pair. */
 @Composable
 private fun StatsRow(stats: List<Pair<String, Int>>) {
     Row(
@@ -206,9 +182,9 @@ private fun StatsRow(stats: List<Pair<String, Int>>) {
     ) {
         stats.forEach { (label, value) ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                MonoLabel(label, color = MonoTextMuted, fontSize = 8.sp)
-                Spacer(modifier = Modifier.height(2.dp))
-                MonoLabel(value.toString(), color = MonoText, fontSize = 10.sp)
+                MonoLabel(label, color = MonoTextMuted, fontSize = 11.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                MonoLabel(value.toString(), color = MonoText, fontSize = 15.sp)
             }
         }
     }
@@ -302,86 +278,67 @@ private fun weaknessesAndResists(type1: String?, type2: String?): Pair<List<Stri
     return weak to resist
 }
 
+/** A small filled colour chip -- not a frame/border, just the one allowed pop of colour. */
 @Composable
 private fun TypeBadge(type: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .background(typeColor(type), RoundedCornerShape(3.dp))
-            .padding(horizontal = 5.dp, vertical = 2.dp),
+            .padding(horizontal = 7.dp, vertical = 3.dp),
         contentAlignment = Alignment.Center,
     ) {
-        MonoLabel(TypeAbbrev[type] ?: type.take(3).uppercase(), color = Color.White, fontSize = 7.sp)
+        MonoLabel(TypeAbbrev[type] ?: type.take(3).uppercase(), color = Color.White, fontSize = 9.sp)
     }
 }
 
-/** Wraps type badges into rows of 6 so long weakness/resist lists don't overflow the panel width. */
+/** Wraps type badges into rows of 6 so long weakness/resist lists don't overflow the width. */
 @Composable
 private fun TypeBadgeRow(types: List<String>) {
     if (types.isEmpty()) {
-        MonoLabel("NONE", color = MonoTextMuted, fontSize = 8.sp)
+        MonoLabel("NONE", color = MonoTextMuted, fontSize = 11.sp)
         return
     }
     val rows = types.chunked(6)
     rows.forEachIndexed { rowIndex, rowTypes ->
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             rowTypes.forEach { TypeBadge(it) }
         }
-        if (rowIndex != rows.lastIndex) Spacer(modifier = Modifier.height(4.dp))
+        if (rowIndex != rows.lastIndex) Spacer(modifier = Modifier.height(6.dp))
     }
 }
 
-/** One cell of the 2x2 move grid: name (tinted by type), type label, and PP. */
+/** One cell of the 2x2 move grid: name and type label tinted by type, no border. */
 @Composable
 private fun MoveCard(name: String, type: String, pp: Int, ppMax: Int, modifier: Modifier = Modifier) {
     val color = typeColor(type)
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .border(2.dp, color, RoundedCornerShape(4.dp))
-            .padding(8.dp),
-    ) {
-        Column {
-            MonoLabel(name.uppercase(), color = color, fontSize = 9.sp)
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                MonoLabel(type.uppercase(), color = MonoTextMuted, fontSize = 7.sp)
-                MonoLabel("PP $pp/$ppMax", color = MonoTextMuted, fontSize = 7.sp)
-            }
+    Column(modifier = modifier.fillMaxWidth()) {
+        MonoLabel(name.uppercase(), color = color, fontSize = 13.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            MonoLabel(type.uppercase(), color = MonoTextMuted, fontSize = 10.sp)
+            MonoLabel("PP $pp/$ppMax", color = MonoTextMuted, fontSize = 10.sp)
         }
-    }
-}
-
-@Composable
-private fun MonoBgBox(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(elevation = 2.dp, shape = RoundedCornerShape(6.dp), ambientColor = MonoAccentGlow, spotColor = MonoAccentGlow)
-            .background(MonoBg, RoundedCornerShape(6.dp))
-            .border(1.dp, MonoAccent, RoundedCornerShape(6.dp))
-            .padding(10.dp),
-    ) {
-        content()
     }
 }
 
 @Composable
 private fun CloseButton(onClose: () -> Unit) {
-    Box(
+    MonoLabel(
+        text = "CLOSE",
+        color = MonoAccent,
+        fontSize = 14.sp,
         modifier = Modifier
-            .height(28.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .border(1.dp, MonoAccent, RoundedCornerShape(6.dp))
-            .clickable(onClick = onClose)
-            .padding(horizontal = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        MonoLabel("CLOSE", fontSize = 9.sp)
-    }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClose,
+            )
+            .padding(8.dp),
+    )
 }

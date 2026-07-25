@@ -116,20 +116,20 @@ fun OpponentScreen(onClose: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp),
+                .padding(18.dp),
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 MonoLabel(
                     text = "CLOSE",
                     color = MonoAccent,
-                    fontSize = 13.sp,
+                    fontSize = 17.sp,
                     modifier = Modifier
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = onClose,
                         )
-                        .padding(8.dp),
+                        .padding(10.dp),
                 )
             }
 

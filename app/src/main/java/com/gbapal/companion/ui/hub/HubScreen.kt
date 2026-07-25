@@ -208,21 +208,21 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(MonoBg)
-            .padding(start = 14.dp, end = 14.dp, bottom = 14.dp, top = 6.dp),
+            .padding(start = 18.dp, end = 18.dp, bottom = 18.dp, top = 8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MonoLabel(time, color = MonoText, fontSize = 12.sp)
-            Spacer(modifier = Modifier.width(10.dp))
+            MonoLabel(time, color = MonoText, fontSize = 15.sp)
+            Spacer(modifier = Modifier.width(14.dp))
             BatteryIcon(percent = battery)
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(14.dp))
             MonoLabel(
                 text = "⚙",
                 color = MonoAccent,
-                fontSize = 18.sp,
+                fontSize = 22.sp,
                 modifier = Modifier.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -242,32 +242,32 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(36.dp, Alignment.CenterHorizontally),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(48.dp, Alignment.CenterHorizontally),
         ) {
             MonoLabel(
                 text = "OPPONENT",
                 color = MonoAccent,
-                fontSize = 14.sp,
+                fontSize = 18.sp,
                 modifier = Modifier
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = { showOpponentScreen = true },
                     )
-                    .padding(8.dp),
+                    .padding(10.dp),
             )
             MonoLabel(
                 text = "DEX",
                 color = MonoAccent,
-                fontSize = 14.sp,
+                fontSize = 18.sp,
                 modifier = Modifier
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {},
                     )
-                    .padding(8.dp),
+                    .padding(10.dp),
             )
         }
     }
@@ -309,7 +309,7 @@ internal fun PartyGrid(
         mons.chunked(2).forEachIndexed { rowIndex, rowMons ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally),
             ) {
                 rowMons.forEachIndexed { colIndex, mon ->
                     MonEntry(mon) { onSelect(rowIndex * 2 + colIndex) }
@@ -337,15 +337,17 @@ internal fun MonEntry(mon: HubMon, onClick: () -> Unit) {
                 bitmap = sprite,
                 contentDescription = null,
                 filterQuality = FilterQuality.None,
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier.size(68.dp),
             )
         } else {
-            Box(modifier = Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-                MonoLabel("?", color = MonoTextMuted, fontSize = 16.sp)
+            Box(modifier = Modifier.size(68.dp), contentAlignment = Alignment.Center) {
+                MonoLabel("?", color = MonoTextMuted, fontSize = 20.sp)
             }
         }
-        MonoLabel(mon.nickname.uppercase(), color = MonoText, fontSize = 11.sp)
-        MonoLabel("Lv${mon.level}", color = MonoTextMuted, fontSize = 10.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        MonoLabel(mon.nickname.uppercase(), color = MonoText, fontSize = 15.sp)
+        Spacer(modifier = Modifier.height(2.dp))
+        MonoLabel("Lv${mon.level}", color = MonoTextMuted, fontSize = 13.sp)
     }
 }
 
@@ -353,7 +355,7 @@ internal fun MonEntry(mon: HubMon, onClick: () -> Unit) {
 @Composable
 private fun BatteryIcon(percent: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Canvas(modifier = Modifier.size(width = 26.dp, height = 13.dp)) {
+        Canvas(modifier = Modifier.size(width = 32.dp, height = 16.dp)) {
             val bodyWidth = size.width * 0.88f
             drawRoundRect(
                 color = MonoAccent,
@@ -378,6 +380,6 @@ private fun BatteryIcon(percent: Int) {
             )
         }
         Spacer(modifier = Modifier.width(4.dp))
-        MonoLabel("$percent%", color = MonoText, fontSize = 11.sp)
+        MonoLabel("$percent%", color = MonoText, fontSize = 14.sp)
     }
 }
