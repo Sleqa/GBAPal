@@ -209,7 +209,7 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(MonoBg)
-            .padding(start = 18.dp, end = 18.dp, bottom = 18.dp, top = 8.dp),
+            .padding(start = 14.dp, end = 14.dp, bottom = 14.dp, top = 6.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -217,9 +217,9 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MonoLabel(time, color = MonoText, fontSize = 15.sp)
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             BatteryIcon(percent = battery)
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             MonoLabel(
                 text = "⚙",
                 color = MonoAccent,
@@ -243,8 +243,8 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(48.dp, Alignment.CenterHorizontally),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(36.dp, Alignment.CenterHorizontally),
         ) {
             MonoLabel(
                 text = "OPPONENT",
@@ -256,7 +256,7 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
                         indication = null,
                         onClick = { showOpponentScreen = true },
                     )
-                    .padding(10.dp),
+                    .padding(8.dp),
             )
             MonoLabel(
                 text = "DEX",
@@ -268,7 +268,7 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
                         indication = null,
                         onClick = {},
                     )
-                    .padding(10.dp),
+                    .padding(8.dp),
             )
         }
     }
@@ -310,7 +310,7 @@ internal fun PartyGrid(
         mons.chunked(2).forEachIndexed { rowIndex, rowMons ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
             ) {
                 rowMons.forEachIndexed { colIndex, mon ->
                     MonEntry(mon) { onSelect(rowIndex * 2 + colIndex) }
@@ -345,9 +345,7 @@ internal fun MonEntry(mon: HubMon, onClick: () -> Unit) {
                 MonoLabel("?", color = MonoTextMuted, fontSize = 20.sp)
             }
         }
-        Spacer(modifier = Modifier.height(6.dp))
         MonoLabel(mon.nickname.uppercase(), color = MonoText, fontSize = 15.sp)
-        Spacer(modifier = Modifier.height(2.dp))
         MonoLabel("Lv${mon.level}", color = MonoTextMuted, fontSize = 13.sp)
     }
 }

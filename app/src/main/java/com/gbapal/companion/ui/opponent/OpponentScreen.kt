@@ -116,7 +116,7 @@ fun OpponentScreen(onClose: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(18.dp),
+                .padding(14.dp),
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 MonoLabel(
@@ -129,7 +129,7 @@ fun OpponentScreen(onClose: () -> Unit) {
                             indication = null,
                             onClick = onClose,
                         )
-                        .padding(10.dp),
+                        .padding(8.dp),
                 )
             }
 

@@ -44,6 +44,9 @@ fun MonoLabel(
             fontWeight = fontWeight,
             fontSize = fontSize,
             lineHeight = fontSize * 1.3f,
+            // A modest amount of tracking (not the inter-element spacing) --
+            // scaled to font size so it reads consistently at every size used.
+            letterSpacing = fontSize * 0.06f,
         ),
     )
 }

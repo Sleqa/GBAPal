@@ -62,7 +62,7 @@ fun PokemonDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MonoBg)
-            .padding(18.dp)
+            .padding(14.dp)
             .verticalScroll(rememberScrollState()),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -74,14 +74,14 @@ fun PokemonDetailScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     MonoLabel(displayName.uppercase(), color = MonoText, fontSize = 20.sp)
                     types.forEach { type ->
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         TypeBadge(type)
                     }
                 }
                 CloseButton(onClose)
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (sprite != null) {
@@ -97,30 +97,30 @@ fun PokemonDetailScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.width(18.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     MonoLabel("Lv ${mon.level}", color = MonoText, fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     MonoLabel(
                         "Item: ${names.itemName(mon.heldItemId)}   Ability: ${names.abilityName(mon.abilityId)}",
                         color = MonoTextMuted,
                         fontSize = 11.sp,
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     PixelHpBar(
                         fraction = if (mon.maxHp > 0) mon.currentHp.toFloat() / mon.maxHp else 0f,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     MonoLabel("HP ${mon.currentHp}/${mon.maxHp}", color = MonoText, fontSize = 13.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             MonoLabel("STATS", color = MonoTextMuted, fontSize = 13.sp)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             StatsRow(
                 listOf(
                     "ATK" to mon.attack,
@@ -131,15 +131,15 @@ fun PokemonDetailScreen(
                 ),
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             MonoLabel("MOVES", color = MonoTextMuted, fontSize = 13.sp)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             val rows = mon.moves.mapIndexed { i, moveId -> moveId to mon.pp.getOrElse(i) { 0 } }.chunked(2)
             rows.forEachIndexed { rowIndex, rowSlots ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     rowSlots.forEach { (moveId, pp) ->
                         if (moveId != 0) {
@@ -155,20 +155,20 @@ fun PokemonDetailScreen(
                         }
                     }
                 }
-                if (rowIndex != rows.lastIndex) Spacer(modifier = Modifier.height(12.dp))
+                if (rowIndex != rows.lastIndex) Spacer(modifier = Modifier.height(8.dp))
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             MonoLabel("WEAKNESSES", color = MonoTextMuted, fontSize = 13.sp)
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             TypeBadgeRow(weaknesses)
-            Spacer(modifier = Modifier.height(18.dp))
-            MonoLabel("RESISTS", color = MonoTextMuted, fontSize = 13.sp)
             Spacer(modifier = Modifier.height(10.dp))
+            MonoLabel("RESISTS", color = MonoTextMuted, fontSize = 13.sp)
+            Spacer(modifier = Modifier.height(6.dp))
             TypeBadgeRow(resists)
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
@@ -183,7 +183,7 @@ private fun StatsRow(stats: List<Pair<String, Int>>) {
         stats.forEach { (label, value) ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 MonoLabel(label, color = MonoTextMuted, fontSize = 11.sp)
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 MonoLabel(value.toString(), color = MonoText, fontSize = 15.sp)
             }
         }
