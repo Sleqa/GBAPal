@@ -52,11 +52,10 @@ private const val PLAYER_MOVE_POLL_INTERVAL_MS = 1_000L
  * object's coordinates.
  */
 @Composable
-fun OpponentScreen(onClose: () -> Unit) {
+fun OpponentScreen(map: MemoryMap, onClose: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val client = remember { RetroArchClient() }
-    val map = remember { MemoryMap.load(context) }
     val names = remember { NameTables.load(context) }
     val baseStats = remember { BaseStats.load(context) }
     val moveData = remember { MoveData.load(context) }
@@ -73,7 +72,7 @@ fun OpponentScreen(onClose: () -> Unit) {
         isStarted = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(isStarted) {
+    LaunchedEffect(isStarted, map) {
         if (!isStarted) return@LaunchedEffect
         while (isActive) {
             val updatedOpponents = readPartyMons(client, map.enemyParty, baseStats)
@@ -85,7 +84,7 @@ fun OpponentScreen(onClose: () -> Unit) {
     }
 
     var battleStartPos by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    LaunchedEffect(isStarted) {
+    LaunchedEffect(isStarted, map) {
         if (!isStarted) return@LaunchedEffect
         val player = map.overworldObjects
         while (isActive) {

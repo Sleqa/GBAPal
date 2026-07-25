@@ -46,6 +46,53 @@ class RetroArchClient(
     /** Reads [length] bytes from GBA bus address [address] (e.g. 0x02000000 for EWRAM). */
     suspend fun readCoreMemory(address: Int, length: Int): Result =
         sendCommand("READ_CORE_MEMORY ${address.toString(16)} $length")
+
+    /** Content/ROM identity for the loaded game -- see [parseGetStatusResponse]. */
+    suspend fun getStatus(): Result = sendCommand("GET_STATUS")
+}
+
+/** Parsed "GET_STATUS" reply: which ROM is loaded and whether it's running. */
+data class GameStatus(
+    val playing: Boolean,
+    val systemId: String,
+    val gameBasename: String,
+    val crc32: Long,
+)
+
+/**
+ * Parses a "GET_STATUS PLAYING|PAUSED <system_id>,<game_basename>,crc32=<hex>"
+ * reply. crc32 is a checksum of the loaded ROM file itself (not its filename
+ * or in-game header), so it reliably tells apart a hack from its base game and
+ * from other hacks. Returns null for "GET_STATUS CONTENTLESS" (no ROM loaded)
+ * or any reply that doesn't match the expected shape.
+ */
+fun parseGetStatusResponse(response: String): GameStatus? {
+    val trimmed = response.trim()
+    if (!trimmed.startsWith("GET_STATUS")) return null
+    val rest = trimmed.removePrefix("GET_STATUS").trim()
+    if (rest.equals("CONTENTLESS", ignoreCase = true)) return null
+
+    val spaceIndex = rest.indexOf(' ')
+    if (spaceIndex < 0) return null
+    val playing = when {
+        rest.substring(0, spaceIndex).equals("PLAYING", ignoreCase = true) -> true
+        rest.substring(0, spaceIndex).equals("PAUSED", ignoreCase = true) -> false
+        else -> return null
+    }
+
+    // system_id and crc32=<hex> are the first/last comma-separated fields; the
+    // basename is whatever's left in between, rejoined in case it itself
+    // contains a comma.
+    val fields = rest.substring(spaceIndex + 1).split(",")
+    if (fields.size < 3) return null
+    val crc32 = fields.last().substringAfter("crc32=", "").toLongOrNull(16) ?: return null
+
+    return GameStatus(
+        playing = playing,
+        systemId = fields.first(),
+        gameBasename = fields.subList(1, fields.size - 1).joinToString(","),
+        crc32 = crc32,
+    )
 }
 
 /**

@@ -39,9 +39,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.gbapal.companion.memory.GameProfiles
 import com.gbapal.companion.memory.MemoryMap
 import com.gbapal.companion.memory.PartyLayout
 import com.gbapal.companion.network.RetroArchClient
+import com.gbapal.companion.network.parseGetStatusResponse
 import com.gbapal.companion.network.parseReadCoreMemoryResponse
 import com.gbapal.companion.pokemon.BaseStats
 import com.gbapal.companion.pokemon.Gen3Decrypt
@@ -62,6 +64,7 @@ import java.util.Calendar
 
 private const val PARTY_POLL_INTERVAL_MS = 10_000L
 private const val CLOCK_BATTERY_POLL_INTERVAL_MS = 15_000L
+private const val GAME_DETECT_POLL_INTERVAL_MS = 20_000L
 
 data class HubMon(
     val speciesId: Int,
@@ -138,12 +141,13 @@ fun HubScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val client = remember { RetroArchClient() }
-    val map = remember { MemoryMap.load(context) }
+    var gameProfile by remember { mutableStateOf(GameProfiles.default(context)) }
+    val map = gameProfile.memoryMap
     val names = remember { NameTables.load(context) }
     val baseStats = remember { BaseStats.load(context) }
     val moveData = remember { MoveData.load(context) }
 
-    val battleCounterAnchor = remember { map.anchors.firstOrNull { it.name == "totalBattleCounter" } }
+    val battleCounterAnchor = remember(map) { map.anchors.firstOrNull { it.name == "totalBattleCounter" } }
 
     var party by remember { mutableStateOf<List<HubMon>>(emptyList()) }
     var lastBattleCounter by remember { mutableStateOf<Int?>(null) }
@@ -162,8 +166,12 @@ fun HubScreen() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(isStarted, showOpponentScreen) {
+    LaunchedEffect(isStarted, showOpponentScreen, map) {
         if (!isStarted) return@LaunchedEffect
+        // A profile swap means a different battleCounterAnchor address entirely --
+        // never compare a freshly-read byte from it against a leftover value from
+        // the previous profile's (different) address.
+        lastBattleCounter = null
         while (isActive) {
             val updatedParty = readPartyMons(client, map.party, baseStats)
             if (updatedParty != party) {
@@ -200,6 +208,21 @@ fun HubScreen() {
             battery = batteryPercent(context)
             time = clockText()
             delay(CLOCK_BATTERY_POLL_INTERVAL_MS)
+        }
+    }
+
+    LaunchedEffect(isStarted) {
+        if (!isStarted) return@LaunchedEffect
+        while (isActive) {
+            val status = (client.getStatus() as? RetroArchClient.Result.Success)
+                ?.let { parseGetStatusResponse(it.response) }
+            if (status != null) {
+                val matched = GameProfiles.forCrc32(context, status.crc32)
+                if (matched != null && matched.id != gameProfile.id) {
+                    gameProfile = matched
+                }
+            }
+            delay(GAME_DETECT_POLL_INTERVAL_MS)
         }
     }
 
@@ -275,7 +298,7 @@ fun HubScreen() {
     }
 
     if (showOpponentScreen) {
-        OpponentScreen(onClose = { showOpponentScreen = false })
+        OpponentScreen(map = map, onClose = { showOpponentScreen = false })
     }
     }
 }

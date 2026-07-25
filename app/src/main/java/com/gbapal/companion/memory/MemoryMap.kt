@@ -38,9 +38,9 @@ data class MemoryMap(
             confidence = obj.getString("confidence"),
         )
 
-        /** Loads the bundled seed map from assets/unbound_memory_map.json. */
-        fun load(context: Context): MemoryMap {
-            val json = context.assets.open("unbound_memory_map.json")
+        /** Loads a bundled per-game memory map, e.g. "game_profiles/unbound.json". */
+        fun load(context: Context, assetPath: String): MemoryMap {
+            val json = context.assets.open(assetPath)
                 .bufferedReader().use { it.readText() }
             val root = JSONObject(json)
 
