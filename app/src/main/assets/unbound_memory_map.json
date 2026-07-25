@@ -327,6 +327,20 @@
       "note": "Changed 0x04 -> 0x00 on entering a wild battle, diff-scanner result from a single test. Sits exactly 4 bytes after repelStepCount, so it may be an adjacent field in the same small struct rather than something battle-related. To confirm: watch it while walking with no repel active (does it count steps or encounters?), and see if it resets on other triggers besides battle entry."
     },
     {
+      "name": "battleActiveSpecies",
+      "address": "0x020267B4",
+      "size": 2,
+      "confidence": "candidate",
+      "note": "Changed 0x01E6 (486 = Chingling) -> 0x0434 (1076 = Stakataka), diff-scanner result from sending out a non-lead party member mid-battle (species values confirmed against species_names.json). Hypothesis: current active battler's species ID, updated on switch-in/send-out. To confirm: check it also updates on the opponent's switch-ins and on fainting into the next mon, and returns to the lead's species at the start of the next battle."
+    },
+    {
+      "name": "battleSentOutFlags",
+      "address": "0x02025855",
+      "size": 1,
+      "confidence": "candidate",
+      "note": "Changed 0xC0 -> 0xE0 (only bit 0x20 newly set) in the same diff-scanner test as battleActiveSpecies, sending out a third party member mid-battle. Hypothesis: a per-party-slot bitfield tracking which mons have already been sent out this battle. Sits in the same small address range as cheatItemSlot (0x02025804) and battleStateFlag (0x02025896), consistent with a shared battle-state struct. To confirm: check the bit pattern against party slot order across a battle with a different lead/switch sequence."
+    },
+    {
       "name": "stringBuffer0",
       "address": "0x02021CD0",
       "size": 32,
