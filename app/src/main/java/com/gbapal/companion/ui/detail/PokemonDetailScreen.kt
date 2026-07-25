@@ -101,9 +101,10 @@ fun PokemonDetailScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (sprite != null) {
+                val currentSprite = sprite
+                if (currentSprite != null) {
                     Image(
-                        bitmap = sprite,
+                        bitmap = currentSprite,
                         contentDescription = null,
                         filterQuality = FilterQuality.None,
                         modifier = Modifier.size(88.dp),

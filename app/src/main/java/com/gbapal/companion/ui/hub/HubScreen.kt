@@ -437,9 +437,10 @@ internal fun MonEntry(mon: HubMon, client: RetroArchClient, map: MemoryMap, onCl
             onClick = onClick,
         ),
     ) {
-        if (sprite != null) {
+        val currentSprite = sprite
+        if (currentSprite != null) {
             Image(
-                bitmap = sprite,
+                bitmap = currentSprite,
                 contentDescription = null,
                 filterQuality = FilterQuality.None,
                 modifier = Modifier.size(68.dp),
