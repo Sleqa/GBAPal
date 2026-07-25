@@ -327,18 +327,18 @@
       "note": "Changed 0x04 -> 0x00 on entering a wild battle, diff-scanner result from a single test. Sits exactly 4 bytes after repelStepCount, so it may be an adjacent field in the same small struct rather than something battle-related. To confirm: watch it while walking with no repel active (does it count steps or encounters?), and see if it resets on other triggers besides battle entry."
     },
     {
-      "name": "possibleTrainerBattleCounter1",
+      "name": "totalBattleCounter",
       "address": "0x02026748",
       "size": 1,
       "confidence": "candidate",
-      "note": "Two independent trainer-battle entries both produced a clean +1: 0x78->0x79 in the first test (with walking/dialogue in the snapshot gap; re-tested after send-out with no further change), then 0x7A->0x7B in a second, separate trainer battle. Reproducible across two different trainer encounters, which weighs against pure coincidence. Sits 8 bytes before possibleTrainerBattleCounter2, which moved the same way (+1) in both tests. Still not bumped past candidate: both tests entered battle after walking, so a passive/time-based counter that just happens to tick roughly once per battle-length interval isn't ruled out yet. To fully confirm: snapshot immediately before/after triggering a trainer encounter with zero walking in between, and separately confirm it does NOT drift while standing still in the overworld for a similar span of time."
+      "note": "Formerly possibleTrainerBattleCounter1 -- renamed after further testing showed it isn't trainer-specific. Incremented by exactly +1 on every one of 8 consecutive battles entered (mix of wild encounters and trainer battles): 0x7A,0x7B,0x7C,0x7D,0x7E,0x7F,0x80,0x81, with zero misses or skips across the run. This is a much stronger signal than a single test -- an 8-for-8 perfect sequential run across mixed battle types is hard to explain as coincidental drift. Working hypothesis: a general 'total battles entered' counter, incremented on any battle type. Kept at candidate (not unbound-verified) only because there's no independent ground-truth value to check it against (e.g. a displayed in-game stat) -- if Unbound's Trainer Card or a stats menu shows a battle count, comparing against that would confirm this outright."
     },
     {
-      "name": "possibleTrainerBattleCounter2",
+      "name": "possibleWildBattleCounter",
       "address": "0x02026750",
       "size": 1,
       "confidence": "candidate",
-      "note": "Tracks possibleTrainerBattleCounter1 exactly across both tests: 0x87->0x88 in the first trainer battle, then 0x88->0x89 in the second, independent one. Same reproducibility signal and same outstanding caveat -- needs a zero-walking-gap test and a standing-still baseline to rule out a passive time-based counter."
+      "note": "Formerly possibleTrainerBattleCounter2. Tracked totalBattleCounter's +1 steps exactly in the first two tests (0x87->0x88, then 0x88->0x89), but later testing showed it does NOT increment on every battle: it went 0x79 then later jumped straight to 0x8A-0x8D (a +17 jump), while totalBattleCounter kept incrementing by exactly 1 each time over the same span. Working hypothesis: this only increments on a subset of battles -- e.g. wild encounters only, with trainer battles (and any wild battles that happened between checks) not being individually observed, hence the jump. Unconfirmed: the exact battle-type sequence behind the +17 jump wasn't recorded. To confirm: log each battle's type (wild vs trainer) in order alongside a counter read after every single one, to see whether this only moves on wild encounters, only on trainer battles, or some other subset."
     },
     {
       "name": "battleActiveSpecies",
