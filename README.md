@@ -48,6 +48,11 @@ the committed defaults.
 3. Install this app on the same device (or a second screen) — the hub
    connects automatically and starts tracking your party.
 
+## Usage of AI
+
+  AI was obviously used to make this app. I by no means have any real coding experience, this is simply something I personally wanted to build
+  for my playthroughs of Pokemon Rom Hacks and thought others may enjoy using it too.
+
 ## Installing updates via Obtainium
 
 Every push to `main` builds a release APK via GitHub Actions and publishes
