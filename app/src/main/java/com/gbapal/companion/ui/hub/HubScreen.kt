@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -39,9 +40,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.gbapal.companion.BuildConfig
 import com.gbapal.companion.memory.GameProfiles
 import com.gbapal.companion.memory.MemoryMap
 import com.gbapal.companion.memory.PartyLayout
+import com.gbapal.companion.network.GameStatus
 import com.gbapal.companion.network.RetroArchClient
 import com.gbapal.companion.network.parseGetStatusResponse
 import com.gbapal.companion.network.parseReadCoreMemoryResponse
@@ -156,6 +159,7 @@ fun HubScreen() {
     var selectedSlot by remember { mutableStateOf<Int?>(null) }
     var showOpponentScreen by remember { mutableStateOf(false) }
     var isStarted by remember { mutableStateOf(false) }
+    var lastGameStatus by remember { mutableStateOf<GameStatus?>(null) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, _ ->
@@ -217,6 +221,7 @@ fun HubScreen() {
             val status = (client.getStatus() as? RetroArchClient.Result.Success)
                 ?.let { parseGetStatusResponse(it.response) }
             if (status != null) {
+                lastGameStatus = status
                 val matched = GameProfiles.forCrc32(context, status.crc32)
                 if (matched != null && matched.id != gameProfile.id) {
                     gameProfile = matched
@@ -243,6 +248,24 @@ fun HubScreen() {
             MonoLabel(time, color = MonoText, fontSize = 15.sp)
             Spacer(modifier = Modifier.width(10.dp))
             BatteryIcon(percent = battery)
+        }
+
+        // Test-build-only readout of the live GET_STATUS crc32, for capturing
+        // the value needed to add a new game_profiles.json entry. Never built
+        // into the public release (BuildConfig.SHOW_ROM_INFO is false there).
+        if (BuildConfig.SHOW_ROM_INFO) {
+            val status = lastGameStatus
+            SelectionContainer {
+                MonoLabel(
+                    text = if (status != null) {
+                        "ROM: ${status.gameBasename} | crc32=${status.crc32.toString(16)} | profile=${gameProfile.id}"
+                    } else {
+                        "ROM: waiting for GET_STATUS..."
+                    },
+                    color = MonoTextMuted,
+                    fontSize = 10.sp,
+                )
+            }
         }
 
         // Three rows of two, filling the screen: the middle row sits at the

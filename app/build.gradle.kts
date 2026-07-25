@@ -14,6 +14,7 @@ android {
         targetSdk = 35
         versionCode = (System.getenv("APP_VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.0"
+        buildConfigField("boolean", "SHOW_ROM_INFO", "false")
     }
 
     // A fixed signing key so Obtainium/sideload updates install in place instead of
@@ -53,6 +54,7 @@ android {
             initWith(getByName("release"))
             applicationIdSuffix = ".test"
             resValue("string", "app_name", "GBA Pal (Test)")
+            buildConfigField("boolean", "SHOW_ROM_INFO", "true")
         }
     }
 
@@ -68,6 +70,7 @@ android {
     buildFeatures {
         compose = true
         resValues = true
+        buildConfig = true
     }
 }
 
