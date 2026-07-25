@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,11 +40,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.gbapal.companion.BuildConfig
 import com.gbapal.companion.memory.GameProfiles
 import com.gbapal.companion.memory.MemoryMap
 import com.gbapal.companion.memory.PartyLayout
-import com.gbapal.companion.network.GameStatus
 import com.gbapal.companion.network.RetroArchClient
 import com.gbapal.companion.network.parseGetStatusResponse
 import com.gbapal.companion.network.parseReadCoreMemoryResponse
@@ -65,7 +61,6 @@ import com.gbapal.companion.ui.theme.MonoText
 import com.gbapal.companion.ui.theme.MonoTextMuted
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import java.util.Calendar
 
 private const val PARTY_POLL_INTERVAL_MS = 10_000L
@@ -147,7 +142,6 @@ fun HubScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val client = remember { RetroArchClient() }
-    val scope = rememberCoroutineScope()
     var gameProfile by remember { mutableStateOf(GameProfiles.default(context)) }
     val map = gameProfile.memoryMap
     val names = remember { NameTables.load(context) }
@@ -155,17 +149,14 @@ fun HubScreen() {
     val moveData = remember { MoveData.load(context) }
 
     val battleCounterAnchor = remember(map) { map.anchors.firstOrNull { it.name == "totalBattleCounter" } }
-    val repelAnchor = remember(map) { map.anchors.firstOrNull { it.name == "repelStepCount" } }
 
     var party by remember { mutableStateOf<List<HubMon>>(emptyList()) }
     var lastBattleCounter by remember { mutableStateOf<Int?>(null) }
-    var repelSteps by remember { mutableStateOf<Int?>(null) }
     var battery by remember { mutableIntStateOf(batteryPercent(context)) }
     var time by remember { mutableStateOf(clockText()) }
     var selectedSlot by remember { mutableStateOf<Int?>(null) }
     var showOpponentScreen by remember { mutableStateOf(false) }
     var isStarted by remember { mutableStateOf(false) }
-    var lastGameStatus by remember { mutableStateOf<GameStatus?>(null) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, _ ->
@@ -208,16 +199,6 @@ fun HubScreen() {
                     }
                 }
             }
-            if (BuildConfig.IS_TEST_BUILD) {
-                val repel = repelAnchor
-                if (repel != null) {
-                    val repelResult = client.readCoreMemory(repel.address, repel.size)
-                    repelSteps = (repelResult as? RetroArchClient.Result.Success)
-                        ?.let { parseReadCoreMemoryResponse(it.response) }
-                        ?.firstOrNull()
-                        ?.let { it.toInt() and 0xFF }
-                }
-            }
             delay(PARTY_POLL_INTERVAL_MS)
         }
     }
@@ -237,7 +218,6 @@ fun HubScreen() {
             val status = (client.getStatus() as? RetroArchClient.Result.Success)
                 ?.let { parseGetStatusResponse(it.response) }
             if (status != null) {
-                lastGameStatus = status
                 val matched = GameProfiles.forCrc32(context, status.crc32)
                 if (matched != null && matched.id != gameProfile.id) {
                     gameProfile = matched
@@ -261,62 +241,12 @@ fun HubScreen() {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Test-build-only: live repelStepCount readout plus a button that
-            // tops it up to 250 (what a Max Repel grants) without needing one
-            // in the bag -- for confirming the anchor and as a QoL shortcut.
-            // Never built into the public release.
-            if (BuildConfig.IS_TEST_BUILD) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    MonoLabel(
-                        text = "REPEL ${repelSteps ?: "?"}",
-                        color = MonoTextMuted,
-                        fontSize = 12.sp,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    MonoLabel(
-                        text = "+REPEL",
-                        color = MonoAccent,
-                        fontSize = 12.sp,
-                        modifier = Modifier
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = {
-                                    val repel = repelAnchor ?: return@clickable
-                                    scope.launch {
-                                        client.writeCoreMemory(repel.address, byteArrayOf(0xFA.toByte()))
-                                    }
-                                },
-                            )
-                            .padding(4.dp),
-                    )
-                }
-            } else {
-                Spacer(modifier = Modifier)
-            }
+            Spacer(modifier = Modifier)
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 MonoLabel(time, color = MonoText, fontSize = 15.sp)
                 Spacer(modifier = Modifier.width(10.dp))
                 BatteryIcon(percent = battery)
-            }
-        }
-
-        // Test-build-only readout of the live GET_STATUS crc32, for capturing
-        // the value needed to add a new game_profiles.json entry. Never built
-        // into the public release (BuildConfig.IS_TEST_BUILD is false there).
-        if (BuildConfig.IS_TEST_BUILD) {
-            val status = lastGameStatus
-            SelectionContainer {
-                MonoLabel(
-                    text = if (status != null) {
-                        "ROM: ${status.gameBasename} | crc32=${status.crc32.toString(16)} | profile=${gameProfile.id}"
-                    } else {
-                        "ROM: waiting for GET_STATUS..."
-                    },
-                    color = MonoTextMuted,
-                    fontSize = 10.sp,
-                )
             }
         }
 
@@ -416,17 +346,9 @@ internal fun PartyGrid(
 
 @Composable
 internal fun MonEntry(mon: HubMon, client: RetroArchClient, map: MemoryMap, onClick: () -> Unit) {
-    val context = LocalContext.current
     var sprite by remember(mon.speciesId, map) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(mon.speciesId, map) {
-        sprite = if (BuildConfig.IS_TEST_BUILD) {
-            // Live ROM decode only, while it's still being validated -- no
-            // bundled-art fallback here, so a decode failure stays visible as
-            // the placeholder rather than silently masking a bug.
-            SpriteAssets.romFrontSprite(client, map, mon.speciesId)
-        } else {
-            SpriteAssets.bundledFrontSprite(context, mon.speciesId)
-        }
+        sprite = SpriteAssets.romFrontSprite(client, map, mon.speciesId)
     }
 
     Column(

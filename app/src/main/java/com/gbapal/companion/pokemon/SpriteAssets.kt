@@ -1,8 +1,6 @@
 package com.gbapal.companion.pokemon
 
-import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.gbapal.companion.graphics.GbaTiles
@@ -18,31 +16,7 @@ private const val SPRITE_DECOMPRESSED_SIZE = SPRITE_WIDTH * SPRITE_HEIGHT / 2 //
 private const val PALETTE_DECOMPRESSED_SIZE = 32 // 16 colors x 2 bytes
 
 object SpriteAssets {
-    private val bundledCache = HashMap<Int, ImageBitmap?>()
     private val romCache = HashMap<Pair<MemoryMap, Int>, ImageBitmap?>()
-
-    /**
-     * Front sprites bundled from Dynamic Pokemon Expansion (github.com/DizzyEggg/
-     * Dynamic-Pokemon-Expansion, WTFPL) at assets/sprites/front/<speciesId>.png.
-     * Same source as the species name table, so ids line up. Not every species has
-     * art (1201 of ~1243) -- missing ones return null and the caller shows a
-     * placeholder. Legacy path, being replaced by [romFrontSprite] where a
-     * profile has confirmed sprite/palette tables.
-     */
-    fun bundledFrontSprite(context: Context, speciesId: Int): ImageBitmap? {
-        bundledCache[speciesId]?.let { return it }
-        if (bundledCache.containsKey(speciesId)) return null // cached miss
-
-        val bitmap = try {
-            context.assets.open("sprites/front/$speciesId.png").use { stream ->
-                BitmapFactory.decodeStream(stream)?.asImageBitmap()
-            }
-        } catch (e: java.io.IOException) {
-            null
-        }
-        bundledCache[speciesId] = bitmap
-        return bitmap
-    }
 
     /**
      * Live front sprite decoded straight from the loaded ROM via [client],

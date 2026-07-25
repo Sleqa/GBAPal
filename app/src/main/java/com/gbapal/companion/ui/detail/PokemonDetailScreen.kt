@@ -29,10 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.gbapal.companion.BuildConfig
 import com.gbapal.companion.memory.MemoryMap
 import com.gbapal.companion.network.RetroArchClient
 import com.gbapal.companion.pokemon.BaseStats
@@ -58,14 +56,9 @@ fun PokemonDetailScreen(
     map: MemoryMap,
     onClose: () -> Unit,
 ) {
-    val context = LocalContext.current
     var sprite by remember(mon.speciesId, map) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(mon.speciesId, map) {
-        sprite = if (BuildConfig.IS_TEST_BUILD) {
-            SpriteAssets.romFrontSprite(client, map, mon.speciesId)
-        } else {
-            SpriteAssets.bundledFrontSprite(context, mon.speciesId)
-        }
+        sprite = SpriteAssets.romFrontSprite(client, map, mon.speciesId)
     }
     val speciesName = names.speciesName(mon.speciesId)
     val displayName = mon.nickname.ifBlank { speciesName }
