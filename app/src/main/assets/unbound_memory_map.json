@@ -331,14 +331,14 @@
       "address": "0x02026748",
       "size": 1,
       "confidence": "candidate",
-      "note": "Changed 0x78 -> 0x79 (+1) between an overworld snapshot and entering a trainer battle (no mon sent out yet); re-tested after send-out with no further change. Sits 8 bytes before possibleTrainerBattleCounter2, which moved the same way in the same test. Caveat: the snapshot gap included walking + battle-transition time, not just the entry instant, so this could be a battle-entry tally OR an unrelated low-frequency counter that happened to tick once in that window. To confirm: snapshot immediately before/after triggering a trainer encounter with no walking in between, and check it does NOT drift while just standing still in the overworld."
+      "note": "Two independent trainer-battle entries both produced a clean +1: 0x78->0x79 in the first test (with walking/dialogue in the snapshot gap; re-tested after send-out with no further change), then 0x7A->0x7B in a second, separate trainer battle. Reproducible across two different trainer encounters, which weighs against pure coincidence. Sits 8 bytes before possibleTrainerBattleCounter2, which moved the same way (+1) in both tests. Still not bumped past candidate: both tests entered battle after walking, so a passive/time-based counter that just happens to tick roughly once per battle-length interval isn't ruled out yet. To fully confirm: snapshot immediately before/after triggering a trainer encounter with zero walking in between, and separately confirm it does NOT drift while standing still in the overworld for a similar span of time."
     },
     {
       "name": "possibleTrainerBattleCounter2",
       "address": "0x02026750",
       "size": 1,
       "confidence": "candidate",
-      "note": "Changed 0x87 -> 0x88 (+1) in the same test and same shape as possibleTrainerBattleCounter1, 8 bytes earlier. Same caveat applies -- needs a tightly-scoped retest to rule out an unrelated time-based counter."
+      "note": "Tracks possibleTrainerBattleCounter1 exactly across both tests: 0x87->0x88 in the first trainer battle, then 0x88->0x89 in the second, independent one. Same reproducibility signal and same outstanding caveat -- needs a zero-walking-gap test and a standing-still baseline to rule out a passive time-based counter."
     },
     {
       "name": "battleActiveSpecies",
