@@ -55,9 +55,10 @@ the committed defaults.
 
 ## Installing updates via Obtainium
 
-Every push to `main` builds a release APK via GitHub Actions and publishes
-it as a public GitHub Release (tag `v1.0.<build number>`). Add this repo to
-[Obtainium](https://github.com/ImranR98/Obtainium) as a GitHub source to
-track and auto-update from those releases. Private test builds (triggered
-manually, for testing only) are published as draft releases, which stay
-off the public releases page and out of Obtainium's feed.
+Public releases are cut manually (not on every push to `main`), so the
+public build only ever advances when something is actually ready to ship.
+Add this repo to [Obtainium](https://github.com/ImranR98/Obtainium) as a
+GitHub source to track and auto-update from those releases (tag
+`v1.0.<release number>`). Private test builds (also triggered manually, for
+testing only) are published as draft releases, which stay off the public
+releases page and out of Obtainium's feed.

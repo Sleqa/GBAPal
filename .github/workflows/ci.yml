@@ -1,0 +1,23 @@
+name: CI build check
+
+# Runs on every push to main so a broken commit is caught immediately, but
+# never signs or publishes anything -- that only happens when release.yml
+# or beta-test-release.yml is triggered manually. Uses assembleDebug (no
+# signing config needed) purely to catch compile errors.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Compile debug build
+        run: ./gradlew assembleDebug

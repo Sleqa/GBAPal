@@ -1,8 +1,9 @@
 name: Build and release APK
 
+# Manual only -- public releases are a deliberate act, not a side effect of
+# every push to main. See ci.yml for the build check that still runs on
+# every push (compiles, but never publishes or signs anything).
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
