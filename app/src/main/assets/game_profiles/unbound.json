@@ -195,6 +195,13 @@
     "confidence": "firered-anchor",
     "note": "Engine-level scratch variables used by map scripts. Likely where Unbound's custom mission/difficulty/story flags live, given it heavily extends the script system. Values are transient/context-dependent, not fixed per-var meanings."
   },
+  "frontSpriteTable": {
+    "name": "Front sprite pointer table (ROM), ~gMonFrontPicTable equivalent in Unbound's expanded species struct",
+    "slotStride": 8,
+    "firstSlotAddress": "0x09A1D5B4",
+    "confidence": "unbound-verified",
+    "note": "Confirmed 2026-07-25 via live ROM scan (candidate LZ77-compressed 64x64 sprite blocks, cross-referenced against literal pointer occurrences in the ROM). Species #1/#2/#3 (Bulbasaur/Ivysaur/Venusaur) table entries found at 0x09A1D5BC/C4/CC -- exactly 8 bytes apart, in correct species order. Read the raw 8 bytes at each entry and confirmed the format: [4-byte little-endian ROM pointer to the LZ77 block][u16 decompressed size, 0x0800/2048, matching the LZ77 header at the pointer target][u16 tag, which equals the species ID for all three confirmed entries -- 1, 2, 3]. firstSlotAddress here is species ID 0's slot (Bulbasaur's address minus one stride), so address for species N = firstSlotAddress + N*8; ROM pointers are GBA addresses (0x08000000+), read the same way as any other address via READ_CORE_MEMORY since mGBA maps ROM read-only there. Not yet located: the matching palette pointer table -- needed before real (non-grayscale) colors can be decoded, tile/pixel data alone only gives palette *indices*."
+  },
   "anchors": [
     {
       "name": "playerName",

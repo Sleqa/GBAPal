@@ -19,6 +19,7 @@ data class PartyLayout(
     val slotStride: Int,
     val slotCount: Int,
     val confidence: String,
+    val note: String? = null,
 )
 
 data class MemoryMap(
@@ -29,13 +30,21 @@ data class MemoryMap(
     val overworldObjects: PartyLayout,
     val scriptVars: PartyLayout,
     val anchors: List<Anchor>,
+    /**
+     * Per-species front-sprite pointer table: address for species N is
+     * firstSlotAddress + N * slotStride. Each 8-byte slot is
+     * [4-byte little-endian ROM pointer to LZ77-compressed tile data]
+     * [u16 decompressed size][u16 tag]. Null until discovered for a profile.
+     */
+    val frontSpriteTable: PartyLayout? = null,
 ) {
     companion object {
         private fun parseLayout(obj: JSONObject): PartyLayout = PartyLayout(
             firstSlotAddress = obj.getString("firstSlotAddress").parseHex(),
             slotStride = obj.getInt("slotStride"),
-            slotCount = obj.getInt("slotCount"),
+            slotCount = obj.optInt("slotCount", 0),
             confidence = obj.getString("confidence"),
+            note = if (obj.has("note")) obj.getString("note") else null,
         )
 
         /** Loads a bundled per-game memory map, e.g. "game_profiles/unbound.json". */
@@ -48,6 +57,7 @@ data class MemoryMap(
             val enemyParty = parseLayout(root.getJSONObject("enemyParty"))
             val overworldObjects = parseLayout(root.getJSONObject("overworldObjects"))
             val scriptVars = parseLayout(root.getJSONObject("scriptVars"))
+            val frontSpriteTable = root.optJSONObject("frontSpriteTable")?.let { parseLayout(it) }
 
             val anchorsArr = root.getJSONArray("anchors")
             val anchors = (0 until anchorsArr.length()).map { i ->
@@ -70,6 +80,7 @@ data class MemoryMap(
                 overworldObjects = overworldObjects,
                 scriptVars = scriptVars,
                 anchors = anchors,
+                frontSpriteTable = frontSpriteTable,
             )
         }
     }
