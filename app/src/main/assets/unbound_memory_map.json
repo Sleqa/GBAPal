@@ -327,6 +327,20 @@
       "note": "Changed 0x04 -> 0x00 on entering a wild battle, diff-scanner result from a single test. Sits exactly 4 bytes after repelStepCount, so it may be an adjacent field in the same small struct rather than something battle-related. To confirm: watch it while walking with no repel active (does it count steps or encounters?), and see if it resets on other triggers besides battle entry."
     },
     {
+      "name": "possibleTrainerBattleCounter1",
+      "address": "0x02026748",
+      "size": 1,
+      "confidence": "candidate",
+      "note": "Changed 0x78 -> 0x79 (+1) between an overworld snapshot and entering a trainer battle (no mon sent out yet); re-tested after send-out with no further change. Sits 8 bytes before possibleTrainerBattleCounter2, which moved the same way in the same test. Caveat: the snapshot gap included walking + battle-transition time, not just the entry instant, so this could be a battle-entry tally OR an unrelated low-frequency counter that happened to tick once in that window. To confirm: snapshot immediately before/after triggering a trainer encounter with no walking in between, and check it does NOT drift while just standing still in the overworld."
+    },
+    {
+      "name": "possibleTrainerBattleCounter2",
+      "address": "0x02026750",
+      "size": 1,
+      "confidence": "candidate",
+      "note": "Changed 0x87 -> 0x88 (+1) in the same test and same shape as possibleTrainerBattleCounter1, 8 bytes earlier. Same caveat applies -- needs a tightly-scoped retest to rule out an unrelated time-based counter."
+    },
+    {
       "name": "battleActiveSpecies",
       "address": "0x020267B4",
       "size": 2,
