@@ -35,16 +35,15 @@ import com.gbapal.companion.pokemon.MoveData
 import com.gbapal.companion.pokemon.NameTables
 import com.gbapal.companion.pokemon.SpriteAssets
 import com.gbapal.companion.ui.hub.HubMon
-import com.gbapal.companion.ui.theme.NocturneAccent
-import com.gbapal.companion.ui.theme.NocturneAccentGlow
-import com.gbapal.companion.ui.theme.NocturneBg
-import com.gbapal.companion.ui.theme.NocturneLabel
-import com.gbapal.companion.ui.theme.NocturneSurface
-import com.gbapal.companion.ui.theme.NocturneText
-import com.gbapal.companion.ui.theme.NocturneTextMuted
+import com.gbapal.companion.ui.theme.MonoAccent
+import com.gbapal.companion.ui.theme.MonoAccentGlow
+import com.gbapal.companion.ui.theme.MonoBg
+import com.gbapal.companion.ui.theme.MonoLabel
+import com.gbapal.companion.ui.theme.MonoText
+import com.gbapal.companion.ui.theme.MonoTextMuted
 import com.gbapal.companion.ui.theme.PixelHpBar
 
-/** Full-screen Nocturne-styled summary for one party Pokemon: stats, moveset+PP, item, ability. */
+/** Full-screen Mono-styled summary for one party Pokemon: stats, moveset+PP, item, ability. */
 @Composable
 fun PokemonDetailScreen(
     mon: HubMon,
@@ -66,7 +65,7 @@ fun PokemonDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NocturneBg)
+            .background(MonoBg)
             .padding(14.dp)
             .verticalScroll(rememberScrollState()),
     ) {
@@ -77,7 +76,7 @@ fun PokemonDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    NocturneLabel(displayName.uppercase(), color = NocturneText, fontSize = 14.sp)
+                    MonoLabel(displayName.uppercase(), color = MonoText, fontSize = 14.sp)
                     types.forEach { type ->
                         Spacer(modifier = Modifier.width(6.dp))
                         TypeBadge(type)
@@ -92,10 +91,10 @@ fun PokemonDetailScreen(
                 Box(
                     modifier = Modifier
                         .size(84.dp)
-                        .shadow(elevation = 4.dp, shape = CircleShape, ambientColor = NocturneAccentGlow, spotColor = NocturneAccentGlow)
+                        .shadow(elevation = 4.dp, shape = CircleShape, ambientColor = MonoAccentGlow, spotColor = MonoAccentGlow)
                         .clip(CircleShape)
-                        .background(NocturneSurface)
-                        .border(1.dp, NocturneAccent, CircleShape),
+                        .background(MonoBg)
+                        .border(1.dp, MonoAccent, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (sprite != null) {
@@ -106,18 +105,18 @@ fun PokemonDetailScreen(
                             modifier = Modifier.size(72.dp),
                         )
                     } else {
-                        NocturneLabel("?", color = NocturneText, fontSize = 20.sp)
+                        MonoLabel("?", color = MonoText, fontSize = 20.sp)
                     }
                 }
 
                 Spacer(modifier = Modifier.width(14.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    NocturneLabel("Lv ${mon.level}", color = NocturneText, fontSize = 10.sp)
+                    MonoLabel("Lv ${mon.level}", color = MonoText, fontSize = 10.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    NocturneLabel(
+                    MonoLabel(
                         "Item: ${names.itemName(mon.heldItemId)}   Ability: ${names.abilityName(mon.abilityId)}",
-                        color = NocturneTextMuted,
+                        color = MonoTextMuted,
                         fontSize = 8.sp,
                     )
                     Spacer(modifier = Modifier.height(6.dp))
@@ -126,15 +125,15 @@ fun PokemonDetailScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    NocturneLabel("HP ${mon.currentHp}/${mon.maxHp}", color = NocturneText, fontSize = 9.sp)
+                    MonoLabel("HP ${mon.currentHp}/${mon.maxHp}", color = MonoText, fontSize = 9.sp)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            NocturneSurfaceBox {
+            MonoBgBox {
                 Column {
-                    NocturneLabel("STATS", color = NocturneTextMuted, fontSize = 9.sp)
+                    MonoLabel("STATS", color = MonoTextMuted, fontSize = 9.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     StatsRow(
                         listOf(
@@ -150,9 +149,9 @@ fun PokemonDetailScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            NocturneSurfaceBox {
+            MonoBgBox {
                 Column {
-                    NocturneLabel("MOVES", color = NocturneTextMuted, fontSize = 9.sp)
+                    MonoLabel("MOVES", color = MonoTextMuted, fontSize = 9.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     val rows = mon.moves.mapIndexed { i, moveId -> moveId to mon.pp.getOrElse(i) { 0 } }.chunked(2)
                     rows.forEachIndexed { rowIndex, rowSlots ->
@@ -181,13 +180,13 @@ fun PokemonDetailScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            NocturneSurfaceBox {
+            MonoBgBox {
                 Column {
-                    NocturneLabel("WEAKNESSES", color = NocturneTextMuted, fontSize = 9.sp)
+                    MonoLabel("WEAKNESSES", color = MonoTextMuted, fontSize = 9.sp)
                     Spacer(modifier = Modifier.height(6.dp))
                     TypeBadgeRow(weaknesses)
                     Spacer(modifier = Modifier.height(10.dp))
-                    NocturneLabel("RESISTS", color = NocturneTextMuted, fontSize = 9.sp)
+                    MonoLabel("RESISTS", color = MonoTextMuted, fontSize = 9.sp)
                     Spacer(modifier = Modifier.height(6.dp))
                     TypeBadgeRow(resists)
                 }
@@ -207,9 +206,9 @@ private fun StatsRow(stats: List<Pair<String, Int>>) {
     ) {
         stats.forEach { (label, value) ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                NocturneLabel(label, color = NocturneTextMuted, fontSize = 8.sp)
+                MonoLabel(label, color = MonoTextMuted, fontSize = 8.sp)
                 Spacer(modifier = Modifier.height(2.dp))
-                NocturneLabel(value.toString(), color = NocturneText, fontSize = 10.sp)
+                MonoLabel(value.toString(), color = MonoText, fontSize = 10.sp)
             }
         }
     }
@@ -236,7 +235,7 @@ private val TypeColors = mapOf(
     "Fairy" to Color(0xFFEE99AC),
 )
 
-private fun typeColor(type: String): Color = TypeColors[type] ?: NocturneTextMuted
+private fun typeColor(type: String): Color = TypeColors[type] ?: MonoTextMuted
 
 private val TypeAbbrev = mapOf(
     "Normal" to "NOR",
@@ -311,7 +310,7 @@ private fun TypeBadge(type: String, modifier: Modifier = Modifier) {
             .padding(horizontal = 5.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
-        NocturneLabel(TypeAbbrev[type] ?: type.take(3).uppercase(), color = Color.White, fontSize = 7.sp)
+        MonoLabel(TypeAbbrev[type] ?: type.take(3).uppercase(), color = Color.White, fontSize = 7.sp)
     }
 }
 
@@ -319,7 +318,7 @@ private fun TypeBadge(type: String, modifier: Modifier = Modifier) {
 @Composable
 private fun TypeBadgeRow(types: List<String>) {
     if (types.isEmpty()) {
-        NocturneLabel("NONE", color = NocturneTextMuted, fontSize = 8.sp)
+        MonoLabel("NONE", color = MonoTextMuted, fontSize = 8.sp)
         return
     }
     val rows = types.chunked(6)
@@ -345,27 +344,27 @@ private fun MoveCard(name: String, type: String, pp: Int, ppMax: Int, modifier: 
             .padding(8.dp),
     ) {
         Column {
-            NocturneLabel(name.uppercase(), color = color, fontSize = 9.sp)
+            MonoLabel(name.uppercase(), color = color, fontSize = 9.sp)
             Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                NocturneLabel(type.uppercase(), color = NocturneTextMuted, fontSize = 7.sp)
-                NocturneLabel("PP $pp/$ppMax", color = NocturneTextMuted, fontSize = 7.sp)
+                MonoLabel(type.uppercase(), color = MonoTextMuted, fontSize = 7.sp)
+                MonoLabel("PP $pp/$ppMax", color = MonoTextMuted, fontSize = 7.sp)
             }
         }
     }
 }
 
 @Composable
-private fun NocturneSurfaceBox(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+private fun MonoBgBox(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(elevation = 2.dp, shape = RoundedCornerShape(6.dp), ambientColor = NocturneAccentGlow, spotColor = NocturneAccentGlow)
-            .background(NocturneSurface, RoundedCornerShape(6.dp))
-            .border(1.dp, NocturneAccent, RoundedCornerShape(6.dp))
+            .shadow(elevation = 2.dp, shape = RoundedCornerShape(6.dp), ambientColor = MonoAccentGlow, spotColor = MonoAccentGlow)
+            .background(MonoBg, RoundedCornerShape(6.dp))
+            .border(1.dp, MonoAccent, RoundedCornerShape(6.dp))
             .padding(10.dp),
     ) {
         content()
@@ -378,11 +377,11 @@ private fun CloseButton(onClose: () -> Unit) {
         modifier = Modifier
             .height(28.dp)
             .clip(RoundedCornerShape(6.dp))
-            .border(1.dp, NocturneAccent, RoundedCornerShape(6.dp))
+            .border(1.dp, MonoAccent, RoundedCornerShape(6.dp))
             .clickable(onClick = onClose)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        NocturneLabel("CLOSE", fontSize = 9.sp)
+        MonoLabel("CLOSE", fontSize = 9.sp)
     }
 }

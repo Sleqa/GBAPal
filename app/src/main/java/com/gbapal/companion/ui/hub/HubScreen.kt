@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -51,11 +50,11 @@ import com.gbapal.companion.pokemon.PartyDecoder
 import com.gbapal.companion.pokemon.SpriteAssets
 import com.gbapal.companion.ui.detail.PokemonDetailScreen
 import com.gbapal.companion.ui.opponent.OpponentScreen
-import com.gbapal.companion.ui.theme.NocturneAccent
-import com.gbapal.companion.ui.theme.NocturneBg
-import com.gbapal.companion.ui.theme.NocturneLabel
-import com.gbapal.companion.ui.theme.NocturneText
-import com.gbapal.companion.ui.theme.NocturneTextMuted
+import com.gbapal.companion.ui.theme.MonoAccent
+import com.gbapal.companion.ui.theme.MonoBg
+import com.gbapal.companion.ui.theme.MonoLabel
+import com.gbapal.companion.ui.theme.MonoText
+import com.gbapal.companion.ui.theme.MonoTextMuted
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.util.Calendar
@@ -208,7 +207,7 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NocturneBg)
+            .background(MonoBg)
             .padding(start = 14.dp, end = 14.dp, bottom = 14.dp, top = 6.dp),
     ) {
         Row(
@@ -216,13 +215,13 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            NocturneLabel(time, color = NocturneText, fontSize = 12.sp)
+            MonoLabel(time, color = MonoText, fontSize = 12.sp)
             Spacer(modifier = Modifier.width(10.dp))
             BatteryIcon(percent = battery)
             Spacer(modifier = Modifier.width(10.dp))
-            NocturneLabel(
+            MonoLabel(
                 text = "⚙",
-                color = NocturneAccent,
+                color = MonoAccent,
                 fontSize = 18.sp,
                 modifier = Modifier.clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -246,9 +245,9 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(36.dp, Alignment.CenterHorizontally),
         ) {
-            NocturneLabel(
+            MonoLabel(
                 text = "OPPONENT",
-                color = NocturneAccent,
+                color = MonoAccent,
                 fontSize = 14.sp,
                 modifier = Modifier
                     .clickable(
@@ -258,9 +257,9 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
                     )
                     .padding(8.dp),
             )
-            NocturneLabel(
+            MonoLabel(
                 text = "DEX",
-                color = NocturneAccent,
+                color = MonoAccent,
                 fontSize = 14.sp,
                 modifier = Modifier
                     .clickable(
@@ -342,40 +341,35 @@ internal fun MonEntry(mon: HubMon, onClick: () -> Unit) {
             )
         } else {
             Box(modifier = Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-                NocturneLabel("?", color = NocturneTextMuted, fontSize = 16.sp)
+                MonoLabel("?", color = MonoTextMuted, fontSize = 16.sp)
             }
         }
-        NocturneLabel(mon.nickname.uppercase(), color = NocturneText, fontSize = 11.sp)
-        NocturneLabel("Lv${mon.level}", color = NocturneTextMuted, fontSize = 10.sp)
+        MonoLabel(mon.nickname.uppercase(), color = MonoText, fontSize = 11.sp)
+        MonoLabel("Lv${mon.level}", color = MonoTextMuted, fontSize = 10.sp)
     }
 }
 
-/** Battery glyph: accent outline + cap, fill bar by charge. */
+/** Battery glyph: white outline + cap, white fill sized by charge. */
 @Composable
 private fun BatteryIcon(percent: Int) {
-    val fillColor = when {
-        percent > 50 -> Color(0xFF58C858)
-        percent > 20 -> Color(0xFFE8B820)
-        else -> Color(0xFFD84040)
-    }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Canvas(modifier = Modifier.size(width = 26.dp, height = 13.dp)) {
             val bodyWidth = size.width * 0.88f
             drawRoundRect(
-                color = NocturneAccent,
+                color = MonoAccent,
                 size = Size(bodyWidth, size.height),
                 cornerRadius = CornerRadius(3f, 3f),
                 style = Stroke(width = 3f),
             )
             drawRoundRect(
-                color = NocturneAccent,
+                color = MonoAccent,
                 topLeft = Offset(bodyWidth + 2f, size.height * 0.28f),
                 size = Size(size.width - bodyWidth - 2f, size.height * 0.44f),
                 cornerRadius = CornerRadius(2f, 2f),
             )
             val inset = 5f
             drawRect(
-                color = fillColor,
+                color = MonoAccent,
                 topLeft = Offset(inset, inset),
                 size = Size(
                     (bodyWidth - inset * 2f) * (percent.coerceIn(0, 100) / 100f),
@@ -384,6 +378,6 @@ private fun BatteryIcon(percent: Int) {
             )
         }
         Spacer(modifier = Modifier.width(4.dp))
-        NocturneLabel("$percent%", color = NocturneText, fontSize = 11.sp)
+        MonoLabel("$percent%", color = MonoText, fontSize = 11.sp)
     }
 }

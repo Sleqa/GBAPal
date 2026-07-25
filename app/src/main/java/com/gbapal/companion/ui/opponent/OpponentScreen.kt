@@ -35,9 +35,9 @@ import com.gbapal.companion.ui.detail.PokemonDetailScreen
 import com.gbapal.companion.ui.hub.HubMon
 import com.gbapal.companion.ui.hub.PartyGrid
 import com.gbapal.companion.ui.hub.readPartyMons
-import com.gbapal.companion.ui.theme.NocturneAccent
-import com.gbapal.companion.ui.theme.NocturneBg
-import com.gbapal.companion.ui.theme.NocturneLabel
+import com.gbapal.companion.ui.theme.MonoAccent
+import com.gbapal.companion.ui.theme.MonoBg
+import com.gbapal.companion.ui.theme.MonoLabel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -112,16 +112,16 @@ fun OpponentScreen(onClose: () -> Unit) {
     // Outer Box stays unpadded so PokemonDetailScreen (a direct sibling here,
     // same pattern as HubScreen) gets the true full screen height instead of
     // being squeezed by this screen's own content padding.
-    Box(modifier = Modifier.fillMaxSize().background(NocturneBg)) {
+    Box(modifier = Modifier.fillMaxSize().background(MonoBg)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(14.dp),
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                NocturneLabel(
+                MonoLabel(
                     text = "CLOSE",
-                    color = NocturneAccent,
+                    color = MonoAccent,
                     fontSize = 13.sp,
                     modifier = Modifier
                         .clickable(

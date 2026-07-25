@@ -35,11 +35,6 @@ object RetroTheme {
     val text = Color(0xFF20304A)         // dark navy text
     val textOnDark = Color(0xFFF7F7E8)
     val accent = Color(0xFFD83030)       // pokeball red
-
-    val hpGreen = Color(0xFF58D058)
-    val hpYellow = Color(0xFFF0C020)
-    val hpRed = Color(0xFFE04040)
-    val hpTrack = Color(0xFF485068)
 }
 
 @Composable
@@ -75,30 +70,25 @@ fun RetroPanel(
     }
 }
 
-/** Classic segmented-look HP bar: dark track, colored fill, sharp corners, border. */
+/** Classic segmented-look HP bar: white track outline, white fill sized by fraction. */
 @Composable
 fun PixelHpBar(
     fraction: Float,
     modifier: Modifier = Modifier,
 ) {
     val clamped = fraction.coerceIn(0f, 1f)
-    val color = when {
-        clamped > 0.5f -> RetroTheme.hpGreen
-        clamped > 0.2f -> RetroTheme.hpYellow
-        else -> RetroTheme.hpRed
-    }
     Box(
         modifier = modifier
             .height(8.dp)
-            .background(RetroTheme.panelBorder, RectangleShape)
+            .background(Color.White.copy(alpha = 0.35f), RectangleShape)
             .padding(1.dp)
-            .background(RetroTheme.hpTrack, RectangleShape),
+            .background(Color.Black, RectangleShape),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(clamped)
                 .height(6.dp)
-                .background(color, RectangleShape),
+                .background(Color.White, RectangleShape),
         )
     }
 }
