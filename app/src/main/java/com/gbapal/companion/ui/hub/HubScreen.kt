@@ -143,10 +143,10 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
     val baseStats = remember { BaseStats.load(context) }
     val moveData = remember { MoveData.load(context) }
 
-    val battleFlagAnchor = remember { map.anchors.firstOrNull { it.name == "battleStateFlag" } }
+    val battleCounterAnchor = remember { map.anchors.firstOrNull { it.name == "totalBattleCounter" } }
 
     var party by remember { mutableStateOf<List<HubMon>>(emptyList()) }
-    var lastBattleFlag by remember { mutableStateOf<Int?>(null) }
+    var lastBattleCounter by remember { mutableStateOf<Int?>(null) }
     var battery by remember { mutableIntStateOf(batteryPercent(context)) }
     var time by remember { mutableStateOf(clockText()) }
     var selectedSlot by remember { mutableStateOf<Int?>(null) }
@@ -170,23 +170,24 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
                 party = updatedParty
             }
             if (!showOpponentScreen) {
-                val anchor = battleFlagAnchor
+                val anchor = battleCounterAnchor
                 if (anchor != null) {
                     val result = client.readCoreMemory(anchor.address, anchor.size)
-                    val flagByte = (result as? RetroArchClient.Result.Success)
+                    val counterByte = (result as? RetroArchClient.Result.Success)
                         ?.let { parseReadCoreMemoryResponse(it.response) }
                         ?.firstOrNull()
                         ?.let { it.toInt() and 0xFF }
-                        ?: 0
                     // First read after a (re)start just calibrates the baseline -- it must
-                    // never trigger on its own, otherwise a stale nonzero value at cold
-                    // start (e.g. right after launch or closing dev tools) looks like an
-                    // edge and pops the opponent screen even though no battle just began.
-                    val previous = lastBattleFlag
-                    if (previous != null && previous == 0 && flagByte != 0) {
-                        showOpponentScreen = true
+                    // never trigger on its own, otherwise whatever value the counter already
+                    // sits at when the hub loads (launch, or closing dev tools) looks like a
+                    // change and pops the opponent screen even though no battle just began.
+                    val previous = lastBattleCounter
+                    if (counterByte != null) {
+                        if (previous != null && counterByte != previous) {
+                            showOpponentScreen = true
+                        }
+                        lastBattleCounter = counterByte
                     }
-                    lastBattleFlag = flagByte
                 }
             }
             delay(PARTY_POLL_INTERVAL_MS)
