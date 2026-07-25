@@ -14,7 +14,9 @@ android {
         targetSdk = 35
         versionCode = (System.getenv("APP_VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.0"
-        buildConfigField("boolean", "SHOW_ROM_INFO", "false")
+        // Gates diagnostic-only UI (live ROM crc32 readout, unconfirmed-anchor
+        // displays/tools) that has no business being in what everyone downloads.
+        buildConfigField("boolean", "IS_TEST_BUILD", "false")
     }
 
     // A fixed signing key so Obtainium/sideload updates install in place instead of
@@ -54,7 +56,7 @@ android {
             initWith(getByName("release"))
             applicationIdSuffix = ".test"
             resValue("string", "app_name", "GBA Pal (Test)")
-            buildConfigField("boolean", "SHOW_ROM_INFO", "true")
+            buildConfigField("boolean", "IS_TEST_BUILD", "true")
         }
     }
 

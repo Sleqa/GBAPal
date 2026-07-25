@@ -6,7 +6,7 @@
       "id": "unbound",
       "displayName": "Pokemon Unbound",
       "asset": "game_profiles/unbound.json",
-      "crc32s": []
+      "crc32s": ["483D4957"]
     }
   ]
 }

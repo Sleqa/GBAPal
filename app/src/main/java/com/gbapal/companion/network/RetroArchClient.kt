@@ -47,6 +47,10 @@ class RetroArchClient(
     suspend fun readCoreMemory(address: Int, length: Int): Result =
         sendCommand("READ_CORE_MEMORY ${address.toString(16)} $length")
 
+    /** Writes [bytes] to GBA bus address [address]. Use sparingly -- this changes live game state. */
+    suspend fun writeCoreMemory(address: Int, bytes: ByteArray): Result =
+        sendCommand("WRITE_CORE_MEMORY ${address.toString(16)} ${bytes.joinToString(" ") { "%02x".format(it) }}")
+
     /** Content/ROM identity for the loaded game -- see [parseGetStatusResponse]. */
     suspend fun getStatus(): Result = sendCommand("GET_STATUS")
 }
