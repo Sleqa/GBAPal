@@ -29,7 +29,10 @@ class RetroArchClient(
                 val requestBytes = "$command\n".toByteArray(Charsets.US_ASCII)
                 socket.send(DatagramPacket(requestBytes, requestBytes.size, address, port))
 
-                val buffer = ByteArray(8192)
+                // Large enough for a full compressed sprite/palette read (hex-encoded,
+                // so ~3 chars per byte) with headroom -- a plain 8192-byte buffer left
+                // too little margin once sprite reads pushed close to that size.
+                val buffer = ByteArray(32768)
                 val packet = DatagramPacket(buffer, buffer.size)
                 socket.receive(packet)
                 Result.Success(String(packet.data, 0, packet.length, Charsets.US_ASCII).trim())

@@ -134,6 +134,8 @@ fun OpponentScreen(map: MemoryMap, onClose: () -> Unit) {
 
             PartyGrid(
                 mons = opponents,
+                client = client,
+                map = map,
                 onSelect = { selectedSlot = it },
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             )
@@ -146,6 +148,8 @@ fun OpponentScreen(map: MemoryMap, onClose: () -> Unit) {
                 names = names,
                 moveData = moveData,
                 baseStats = baseStats,
+                client = client,
+                map = map,
                 onClose = { selectedSlot = null },
             )
         }

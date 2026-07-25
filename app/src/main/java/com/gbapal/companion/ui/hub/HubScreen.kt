@@ -34,6 +34,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -325,6 +326,8 @@ fun HubScreen() {
         // center rather than spread to the edges.
         PartyGrid(
             mons = party,
+            client = client,
+            map = map,
             onSelect = { selectedSlot = it },
             modifier = Modifier.weight(1f).fillMaxWidth(),
         )
@@ -367,6 +370,8 @@ fun HubScreen() {
             names = names,
             moveData = moveData,
             baseStats = baseStats,
+            client = client,
+            map = map,
             onClose = { selectedSlot = null },
         )
     }
@@ -387,6 +392,8 @@ fun HubScreen() {
 @Composable
 internal fun PartyGrid(
     mons: List<HubMon>,
+    client: RetroArchClient,
+    map: MemoryMap,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -400,7 +407,7 @@ internal fun PartyGrid(
                 horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
             ) {
                 rowMons.forEachIndexed { colIndex, mon ->
-                    MonEntry(mon) { onSelect(rowIndex * 2 + colIndex) }
+                    MonEntry(mon, client, map) { onSelect(rowIndex * 2 + colIndex) }
                 }
             }
         }
@@ -408,9 +415,19 @@ internal fun PartyGrid(
 }
 
 @Composable
-internal fun MonEntry(mon: HubMon, onClick: () -> Unit) {
+internal fun MonEntry(mon: HubMon, client: RetroArchClient, map: MemoryMap, onClick: () -> Unit) {
     val context = LocalContext.current
-    val sprite = remember(mon.speciesId) { SpriteAssets.frontSprite(context, mon.speciesId) }
+    var sprite by remember(mon.speciesId, map) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(mon.speciesId, map) {
+        sprite = if (BuildConfig.IS_TEST_BUILD) {
+            // Live ROM decode only, while it's still being validated -- no
+            // bundled-art fallback here, so a decode failure stays visible as
+            // the placeholder rather than silently masking a bug.
+            SpriteAssets.romFrontSprite(client, map, mon.speciesId)
+        } else {
+            SpriteAssets.bundledFrontSprite(context, mon.speciesId)
+        }
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

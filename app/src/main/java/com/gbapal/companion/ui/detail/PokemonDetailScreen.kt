@@ -19,14 +19,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gbapal.companion.BuildConfig
+import com.gbapal.companion.memory.MemoryMap
+import com.gbapal.companion.network.RetroArchClient
 import com.gbapal.companion.pokemon.BaseStats
 import com.gbapal.companion.pokemon.MoveData
 import com.gbapal.companion.pokemon.NameTables
@@ -46,10 +54,19 @@ fun PokemonDetailScreen(
     names: NameTables,
     moveData: MoveData,
     baseStats: BaseStats,
+    client: RetroArchClient,
+    map: MemoryMap,
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
-    val sprite = remember(mon.speciesId) { SpriteAssets.frontSprite(context, mon.speciesId) }
+    var sprite by remember(mon.speciesId, map) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(mon.speciesId, map) {
+        sprite = if (BuildConfig.IS_TEST_BUILD) {
+            SpriteAssets.romFrontSprite(client, map, mon.speciesId)
+        } else {
+            SpriteAssets.bundledFrontSprite(context, mon.speciesId)
+        }
+    }
     val speciesName = names.speciesName(mon.speciesId)
     val displayName = mon.nickname.ifBlank { speciesName }
     val baseEntry = baseStats.entry(mon.speciesId)
