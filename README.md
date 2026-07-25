@@ -1,24 +1,28 @@
 # GBA Pal
 
-Android companion app for GBA Pokemon games, running via RetroArch's mGBA
-core. Talks to RetroArch's Network Command Interface (UDP, default port
-`55355`) to read live game memory. Built for dual-screen handhelds like the
-Ayn Thor, but works as a normal single-screen app too.
+Android companion app for Pokemon Unbound (GBA), running via RetroArch's
+mGBA core. It talks to RetroArch's Network Command Interface (UDP, default
+port `55355`) to read live game memory and mirrors your run on a second
+screen: your party, the current opponent, and a detail view for every
+Pokemon. Built for dual-screen handhelds like the Ayn Thor, but works as a
+normal single-screen app too.
 
-Formerly "UnboundDS" — under the hood it's still wired up for **Pokemon
-Unbound** specifically (its memory map, name tables, and sprites), but the
-rename marks the intent to genericize the game-specific pieces so it can
-support other GBA Pokemon titles/hacks later.
+<p>
+  <img src="docs/screenshots/hub.png" width="45%" alt="Hub screen showing the player's party of six Pokemon" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/pokemon-detail.png" width="45%" alt="Pokemon detail screen showing stats, moves, and type match-ups" />
+</p>
 
-## Status
+## Features
 
-Live companion hub: connects to RetroArch, tracks your party (sprites,
-nicknames, levels) in banners on the home screen, auto-opens an opponent
-view on battle start and returns to the hub once you move again, and has a
-detail screen per Pokemon (stats, moveset, type match-ups). A handful of
-read-only dev tools (memory inspector, diff scanner, anchor verification,
-DexNav probe) sit behind a settings shortcut for confirming/discovering RAM
-addresses.
+- **Hub** — your live party at a glance: sprites, nicknames, and levels,
+  polled straight from game memory.
+- **Auto opponent view** — pops open automatically when a battle starts and
+  returns to the hub once the battle ends, no manual switching needed.
+- **Pokemon detail** — stats, full moveset with PP, held item, ability, and
+  type weaknesses/resistances for any party or opponent Pokemon.
+- Pure black-and-white OLED-friendly theme — the only colour on screen is
+  Pokemon type colour.
 
 ## Building
 
@@ -41,7 +45,8 @@ the committed defaults.
 1. In RetroArch: **Settings → Network → Network Commands** → enable, port
    `55355`.
 2. Load Pokemon Unbound with the mGBA core.
-3. Install this app on the same device and tap **Test connection**.
+3. Install this app on the same device (or a second screen) — the hub
+   connects automatically and starts tracking your party.
 
 ## Installing updates via Obtainium
 

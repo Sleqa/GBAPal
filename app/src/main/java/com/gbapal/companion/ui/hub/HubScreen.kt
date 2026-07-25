@@ -134,7 +134,7 @@ private fun clockText(): String {
 }
 
 @Composable
-fun HubScreen(onDevToolsRequested: () -> Unit) {
+fun HubScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val client = remember { RetroArchClient() }
@@ -220,17 +220,6 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
             MonoLabel(time, color = MonoText, fontSize = 15.sp)
             Spacer(modifier = Modifier.width(10.dp))
             BatteryIcon(percent = battery)
-            Spacer(modifier = Modifier.width(10.dp))
-            MonoLabel(
-                text = "⚙",
-                color = MonoAccent,
-                fontSize = 22.sp,
-                modifier = Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDevToolsRequested,
-                ),
-            )
         }
 
         // Three rows of two, filling the screen: the middle row sits at the

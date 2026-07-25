@@ -1,6 +1,0 @@
-{
-  "_note": "regionMapSectionId (0x02036E10) -> Unbound location name. Crowdsourced by walking around and reading the value live -- Unbound's real table isn't public (region_map_sections.h in CFRU explicitly excludes it), so this only has what's been confirmed by hand so far. Grows over time.",
-  "94": "Fallshore City",
-  "100": "Route 10",
-  "111": "Route 11"
-}

@@ -23,7 +23,6 @@ val MonoBg = Color(0xFF000000)
 val MonoText = Color(0xFFFFFFFF)
 val MonoTextMuted = Color(0x99FFFFFF) // white at ~60% alpha
 val MonoAccent = Color(0xFFFFFFFF)
-val MonoAccentGlow = Color(0x40FFFFFF) // white at ~25% alpha, for shadow/glow tints only
 
 val MonoFont = FontFamily(Font(R.font.upheaval, FontWeight.Normal))
 
