@@ -5,23 +5,18 @@ import android.os.BatteryManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.GenericShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -32,14 +27,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -60,10 +52,8 @@ import com.gbapal.companion.pokemon.SpriteAssets
 import com.gbapal.companion.ui.detail.PokemonDetailScreen
 import com.gbapal.companion.ui.opponent.OpponentScreen
 import com.gbapal.companion.ui.theme.NocturneAccent
-import com.gbapal.companion.ui.theme.NocturneAccentGlow
 import com.gbapal.companion.ui.theme.NocturneBg
 import com.gbapal.companion.ui.theme.NocturneLabel
-import com.gbapal.companion.ui.theme.NocturneSurface
 import com.gbapal.companion.ui.theme.NocturneText
 import com.gbapal.companion.ui.theme.NocturneTextMuted
 import kotlinx.coroutines.delay
@@ -219,52 +209,67 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(NocturneBg)
-            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 3.dp),
+            .padding(start = 14.dp, end = 14.dp, bottom = 14.dp, top = 6.dp),
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TopBarBanner {
-                NocturneLabel(time, color = NocturneText, fontSize = 12.sp)
-                Spacer(modifier = Modifier.width(8.dp))
-                BatteryIcon(percent = battery)
-                Spacer(modifier = Modifier.width(8.dp))
-                NocturneLabel(
-                    text = "⚙",
-                    color = NocturneAccent,
-                    fontSize = 18.sp,
-                    modifier = Modifier.clickable(onClick = onDevToolsRequested),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        // Party banners pop out from the left/right edges, tips pointing in toward
-        // the middle but stopping at 40% of the row each, leaving a gap in the
-        // center -- slots 1-3 on the left, 4-6 on the right.
-        Row(modifier = Modifier.weight(1f)) {
-            BannerColumn(
-                mons = party.take(3),
-                startIndex = 0,
-                pointRight = true,
-                onSelect = { selectedSlot = it },
-                modifier = Modifier.weight(0.4f).fillMaxHeight(),
-            )
-            Spacer(modifier = Modifier.weight(0.2f))
-            BannerColumn(
-                mons = party.drop(3).take(3),
-                startIndex = 3,
-                pointRight = false,
-                onSelect = { selectedSlot = it },
-                modifier = Modifier.weight(0.4f).fillMaxHeight(),
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(modifier = Modifier.fillMaxWidth().height(44.dp)) {
-            HubButton("OPPONENT", onClick = { showOpponentScreen = true }, modifier = Modifier.weight(1f))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NocturneLabel(time, color = NocturneText, fontSize = 12.sp)
             Spacer(modifier = Modifier.width(10.dp))
-            HubButton("DEX", modifier = Modifier.weight(1f))
+            BatteryIcon(percent = battery)
+            Spacer(modifier = Modifier.width(10.dp))
+            NocturneLabel(
+                text = "⚙",
+                color = NocturneAccent,
+                fontSize = 18.sp,
+                modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDevToolsRequested,
+                ),
+            )
+        }
+
+        // Three rows of two, filling the screen: the middle row sits at the
+        // vertical center and the top/bottom rows space out symmetrically
+        // around it. Each row's pair is compressed toward the horizontal
+        // center rather than spread to the edges.
+        PartyGrid(
+            mons = party,
+            onSelect = { selectedSlot = it },
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(36.dp, Alignment.CenterHorizontally),
+        ) {
+            NocturneLabel(
+                text = "OPPONENT",
+                color = NocturneAccent,
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { showOpponentScreen = true },
+                    )
+                    .padding(8.dp),
+            )
+            NocturneLabel(
+                text = "DEX",
+                color = NocturneAccent,
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                    )
+                    .padding(8.dp),
+            )
         }
     }
 
@@ -285,146 +290,63 @@ fun HubScreen(onDevToolsRequested: () -> Unit) {
     }
 }
 
+/**
+ * Up to six Pokemon laid out as three centered rows of two: the middle row
+ * sits at the vertical center of [modifier]'s available height, and the top
+ * and bottom rows space out symmetrically to fill the rest of it. Within a
+ * row, the pair is compressed toward the horizontal center rather than
+ * spread across the full width.
+ */
 @Composable
-internal fun BannerColumn(
+internal fun PartyGrid(
     mons: List<HubMon>,
-    startIndex: Int,
-    pointRight: Boolean,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Bottom-anchored: the bottom banner stays put and any leftover column
-    // height collapses above it, pulling the other rows down closer to it
-    // instead of spreading all three evenly across the full height.
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.Bottom),
+        verticalArrangement = Arrangement.SpaceEvenly,
     ) {
-        repeat(3) { i ->
-            mons.getOrNull(i)?.let { mon ->
-                MonBanner(mon, pointRight) { onSelect(startIndex + i) }
-            }
-        }
-    }
-}
-
-/**
- * A banner shape whose inner edge (the side facing the middle of the screen)
- * is a single slant rather than a pointed tip: the top edge runs the full
- * width while the bottom edge stops short, joined by one diagonal line, and
- * every corner is rounded. [pointRight] controls which side the slant faces.
- */
-private fun bannerShape(pointRight: Boolean) = GenericShape { size, _ ->
-    val w = size.width
-    val h = size.height
-    val slant = w * 0.14f
-    val corner = minOf(w, h) * 0.22f
-    val points = if (pointRight) {
-        listOf(Offset(0f, 0f), Offset(w, 0f), Offset(w - slant, h), Offset(0f, h))
-    } else {
-        listOf(Offset(w, 0f), Offset(0f, 0f), Offset(slant, h), Offset(w, h))
-    }
-    roundedPolygon(points, corner)
-}
-
-/** Traces a closed polygon with each corner replaced by a rounded curve. */
-private fun Path.roundedPolygon(points: List<Offset>, radius: Float) {
-    val n = points.size
-    for (i in 0 until n) {
-        val prev = points[(i - 1 + n) % n]
-        val curr = points[i]
-        val next = points[(i + 1) % n]
-        val r = radius
-            .coerceAtMost((curr - prev).getDistance() / 2f)
-            .coerceAtMost((next - curr).getDistance() / 2f)
-        val approach = curr.towards(prev, r)
-        val depart = curr.towards(next, r)
-        if (i == 0) moveTo(approach.x, approach.y) else lineTo(approach.x, approach.y)
-        quadraticTo(curr.x, curr.y, depart.x, depart.y)
-    }
-    close()
-}
-
-private fun Offset.towards(target: Offset, distance: Float): Offset {
-    val delta = target - this
-    val len = delta.getDistance()
-    return if (len <= 0f) this else this + delta * (distance / len)
-}
-
-/** Same pop-out banner style as the party rows, sized to hug the clock/battery/cog row. */
-@Composable
-private fun TopBarBanner(content: @Composable RowScope.() -> Unit) {
-    val shape = remember { bannerShape(pointRight = false) }
-    Box(
-        modifier = Modifier
-            .shadow(elevation = 3.dp, shape = shape, ambientColor = NocturneAccentGlow, spotColor = NocturneAccentGlow)
-            .clip(shape)
-            .background(NocturneSurface)
-            .border(1.dp, NocturneAccent, shape),
-    ) {
-        Row(
-            modifier = Modifier.padding(start = 22.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            content = content,
-        )
-    }
-}
-
-@Composable
-private fun HubButton(label: String, onClick: () -> Unit = {}, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxHeight()
-            .shadow(elevation = 3.dp, shape = RoundedCornerShape(10.dp), ambientColor = NocturneAccentGlow, spotColor = NocturneAccentGlow)
-            .clip(RoundedCornerShape(10.dp))
-            .background(NocturneSurface)
-            .border(1.dp, NocturneAccent, RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        NocturneLabel(label, color = NocturneAccent, fontSize = 12.sp)
-    }
-}
-
-@Composable
-internal fun MonBanner(mon: HubMon, pointRight: Boolean, onClick: () -> Unit) {
-    val context = LocalContext.current
-    val sprite = remember(mon.speciesId) { SpriteAssets.frontSprite(context, mon.speciesId) }
-    val shape = remember(pointRight) { bannerShape(pointRight) }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(72.dp)
-            .shadow(elevation = 3.dp, shape = shape, ambientColor = NocturneAccentGlow, spotColor = NocturneAccentGlow)
-            .clip(shape)
-            .background(NocturneSurface)
-            .clickable(onClick = onClick)
-            .border(1.dp, NocturneAccent, shape),
-        contentAlignment = if (pointRight) Alignment.CenterStart else Alignment.CenterEnd,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (sprite != null) {
-                Image(
-                    bitmap = sprite,
-                    contentDescription = null,
-                    filterQuality = FilterQuality.None,
-                    modifier = Modifier.size(46.dp),
-                )
-            } else {
-                Box(modifier = Modifier.size(46.dp), contentAlignment = Alignment.Center) {
-                    NocturneLabel("?", color = NocturneTextMuted, fontSize = 14.sp)
+        mons.chunked(2).forEachIndexed { rowIndex, rowMons ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
+            ) {
+                rowMons.forEachIndexed { colIndex, mon ->
+                    MonEntry(mon) { onSelect(rowIndex * 2 + colIndex) }
                 }
             }
-            Spacer(modifier = Modifier.width(6.dp))
-            Column {
-                NocturneLabel(mon.nickname.uppercase(), color = NocturneText, fontSize = 11.sp)
-                NocturneLabel("Lv${mon.level}", color = NocturneTextMuted, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+internal fun MonEntry(mon: HubMon, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val sprite = remember(mon.speciesId) { SpriteAssets.frontSprite(context, mon.speciesId) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onClick,
+        ),
+    ) {
+        if (sprite != null) {
+            Image(
+                bitmap = sprite,
+                contentDescription = null,
+                filterQuality = FilterQuality.None,
+                modifier = Modifier.size(56.dp),
+            )
+        } else {
+            Box(modifier = Modifier.size(56.dp), contentAlignment = Alignment.Center) {
+                NocturneLabel("?", color = NocturneTextMuted, fontSize = 16.sp)
             }
         }
+        NocturneLabel(mon.nickname.uppercase(), color = NocturneText, fontSize = 11.sp)
+        NocturneLabel("Lv${mon.level}", color = NocturneTextMuted, fontSize = 10.sp)
     }
 }
 
