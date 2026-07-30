@@ -1,0 +1,12 @@
+{
+  "_note": "Index of bundled per-game memory-map profiles. crc32s are the RetroArch GET_STATUS checksums (the actual ROM file's CRC32, not a header/title match) that identify each specific ROM/version -- populate as real crc32s are confirmed live. defaultProfileId is used whenever the live crc32 doesn't match any entry (unreleased patch, or a game with no profile yet).",
+  "defaultProfileId": "unbound",
+  "profiles": [
+    {
+      "id": "unbound",
+      "displayName": "Pokemon Unbound",
+      "asset": "game_profiles/unbound.json",
+      "crc32s": ["483D4957"]
+    }
+  ]
+}

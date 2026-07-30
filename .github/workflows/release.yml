@@ -1,0 +1,56 @@
+name: Build and release APK
+
+# Manual only -- public releases are a deliberate act, not a side effect of
+# every push to main. See ci.yml for the build check that still runs on
+# every push (compiles, but never publishes or signs anything).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set version
+        id: version
+        run: |
+          # v1.0.0 was the first public beta, built by this workflow's run
+          # #77 -- patch counts up from 0 from that point so future public
+          # betas read as 1.0.1, 1.0.2, etc. instead of jumping straight to
+          # a run-number-sized patch version.
+          patch=$(( ${{ github.run_number }} - 77 ))
+          echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "name=1.0.${patch}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release APK
+        env:
+          APP_VERSION_CODE: ${{ steps.version.outputs.code }}
+          APP_VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: ./gradlew assembleRelease
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk \
+             dist/GBAPal-v${{ steps.version.outputs.name }}.apk
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.name }}
+          name: GBA Pal v${{ steps.version.outputs.name }} (Beta)
+          body: |
+            Public beta build, published automatically from the `main` branch.
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: dist/*.apk
