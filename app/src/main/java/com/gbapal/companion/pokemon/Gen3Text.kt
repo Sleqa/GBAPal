@@ -32,4 +32,17 @@ object Gen3Text {
         }
         return sb.toString()
     }
+
+    /**
+     * Rough sanity check for a decoded name: a real Gen 3 name is never more
+     * than an occasional unmapped byte. Reading from the wrong address --
+     * e.g. [FireRedLiveData] guessing a table location that doesn't hold what
+     * it expects on this particular ROM -- decodes mostly-garbage bytes,
+     * which renders as a wall of '?'. This lets a caller tell that apart from
+     * a real name and treat it as "no name" instead of showing the garbage.
+     */
+    fun looksLikeName(s: String): Boolean {
+        if (s.isEmpty()) return false
+        return s.count { it == '?' } <= s.length / 3
+    }
 }

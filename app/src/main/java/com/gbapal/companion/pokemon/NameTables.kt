@@ -25,6 +25,11 @@ class NameTables private constructor(
     fun abilityName(id: Int): String = abilities[id] ?: "Unknown #$id"
 
     companion object {
+        /**
+         * Loads the shared fallback name tables, used for anything a profile's
+         * dataTables do not describe. Per-game data comes from the ROM itself
+         * via GameData; see MemoryMap.dataTables.
+         */
         fun load(context: Context): NameTables {
             val species = loadTable(context, "species_names.json")
             val moves = loadTable(context, "move_names.json")

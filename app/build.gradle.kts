@@ -88,4 +88,7 @@ dependencies {
     implementation(libs.androidx.material3)
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit)
+    // Android's bundled org.json is a stub that throws at runtime; unit
+    // tests that parse profile JSON need a real implementation.
+    testImplementation(libs.json)
 }

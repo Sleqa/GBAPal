@@ -1,0 +1,122 @@
+{
+  "baseGame": "firered-us",
+  "engine": "cfru",
+  "_note": "Pokemon Radical Red 4.1, CFRU-based like Unbound. Party/enemyParty/activeBattlers addresses are the standard CFRU ones (identical to unbound.json) -- confirmed live 2026-08-09 by decoding a real in-battle party (Sprigatito, species 921) and enemy (Bidoof, species 452) with correct nickname/level/stats/moves/PP. dataTables addresses were live-scanned specifically for this ROM (crc32 fba55dd8): the generic unregistered-hack fallback (FireRedLiveData) gets species/base-stats/items right by luck via the boot-header-pointer trick and CFRU's stable 28-byte species struct, but has no way to find move/ability *names* beyond vanilla FireRed's original ~78/~354 entries, since Radical Red's much larger expanded tables for those live at addresses the header table doesn't point to. That's what showed up as Bidoof's ability rendering as '?????' and (separately, believed to be FireRedLiveData's table-resolution failure getting permanently cached after a one-off network hiccup -- see Gen3Text.looksLikeName and FireRedLiveData's resolveTables retry fix) Sprigatito showing wrong species data entirely.",
+  "party": {
+    "name": "gPlayerParty",
+    "slotStride": 100,
+    "slotCount": 6,
+    "firstSlotAddress": "0x02024284",
+    "confidence": "radical-red-verified",
+    "note": "Confirmed live 2026-08-09: decoded a lone level-6 Sprigatito (species 921, moves Pound/Tail Whip/Leafage, PP 35/30/40/35) exactly matching what was actually in the party. Same address as Unbound -- standard CFRU location."
+  },
+  "enemyParty": {
+    "name": "gEnemyParty",
+    "slotStride": 100,
+    "slotCount": 6,
+    "firstSlotAddress": "0x0202402C",
+    "confidence": "radical-red-verified",
+    "note": "Confirmed live 2026-08-09: decoded a level-3 wild Bidoof (species 452, moves Quick Attack/Growl) exactly matching the actual battle."
+  },
+  "activeBattlers": {
+    "name": "gBattleMons",
+    "slotStride": 88,
+    "slotCount": 2,
+    "firstSlotAddress": "0x02023BE4",
+    "confidence": "radical-red-verified",
+    "note": "Confirmed live 2026-08-09: entering a wild battle, index 1's species field (offset 0x00) read 0x03B7 (951), which decodes via the speciesNames table above to 'Yungoos' -- a real species, matching the actual encounter. Same address as Unbound."
+  },
+  "overworldObjects": {
+    "name": "gEventObjects (struct EventObject, CFRU naming)",
+    "slotStride": 36,
+    "slotCount": 16,
+    "firstSlotAddress": "0x02036E38",
+    "confidence": "candidate",
+    "note": "Same address as Unbound. Read live 2026-08-09 mid-battle (so movement couldn't be tested) and got a small, sane-looking coordinate (x=20, y=14) rather than garbage -- consistent with this being right, but not proof it updates on a step the way Unbound's does. This is what lets the app notice a battle has ended (a position change after the last totalBattleCounter increment): without it, inBattle would latch true forever the first time a battle starts. Re-verify with a live step test outside of battle when convenient."
+  },
+  "dataTables": {
+    "speciesNames": {
+      "address": "0x094042CC",
+      "stride": 11,
+      "count": 1300,
+      "text": {
+        "via": "inline",
+        "offset": "0x00",
+        "length": 11
+      }
+    },
+    "speciesStats": {
+      "address": "0x097B98EC",
+      "stride": 28,
+      "count": 1300,
+      "layout": "gen3-species"
+    },
+    "moveNames": {
+      "address": "0x090EEEDC",
+      "stride": 17,
+      "count": 700,
+      "text": {
+        "via": "inline",
+        "offset": "0x00",
+        "length": 17
+      }
+    },
+    "moveData": {
+      "address": "0x091521D0",
+      "stride": 12,
+      "count": 700,
+      "layout": "gen3-move-split"
+    },
+    "abilityNames": {
+      "address": "0x090E32C0",
+      "stride": 17,
+      "count": 300,
+      "text": {
+        "via": "inline",
+        "offset": "0x00",
+        "length": 17
+      }
+    },
+    "itemNames": {
+      "address": "0x093C0000",
+      "stride": 44,
+      "count": 700,
+      "text": {
+        "via": "inline",
+        "offset": "0x00",
+        "length": 14
+      }
+    }
+  },
+  "typeNames": {
+    "0": "Normal",
+    "1": "Fighting",
+    "2": "Flying",
+    "3": "Poison",
+    "4": "Ground",
+    "5": "Rock",
+    "6": "Bug",
+    "7": "Ghost",
+    "8": "Steel",
+    "9": "Mystery",
+    "10": "Fire",
+    "11": "Water",
+    "12": "Grass",
+    "13": "Electric",
+    "14": "Psychic",
+    "15": "Ice",
+    "16": "Dragon",
+    "17": "Dark",
+    "23": "Fairy"
+  },
+  "anchors": [
+    {
+      "name": "totalBattleCounter",
+      "address": "0x02026748",
+      "size": 1,
+      "confidence": "radical-red-verified",
+      "note": "Confirmed live 2026-08-09: read 0x07 before entering a wild battle and 0x08 once in it, the only clean +1 change in an 8KB before/after diff of the whole surrounding region (0x02025000-0x02027000, 4 other bytes moved but not in a battle-start shape -- e.g. +3 on two of them, consistent with a handful of overworld steps taken to reach the encounter, not battle state). Same address and semantics as Unbound's own totalBattleCounter -- this is what HubScreen polls to detect a battle starting when a profile has no cleaner battleActiveFlag."
+    }
+  ],
+  "version": "4.1"
+}

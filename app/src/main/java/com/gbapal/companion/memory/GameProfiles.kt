@@ -61,11 +61,19 @@ object GameProfiles {
         return ResolvedGameProfile(entry.id, entry.displayName, map)
     }
 
-    /** The profile used until/unless a live crc32 match resolves a different one. */
+    /**
+     * The profile used until/unless a live crc32 match resolves a different one.
+     *
+     * Marked [MemoryMap.matchesLoadedRom] = false: this is a guess to have
+     * *something* to show before the ROM is even identified, not a claim that
+     * whatever game is actually loaded is this one. See that flag's doc for why
+     * the distinction matters.
+     */
     fun default(context: Context): ResolvedGameProfile {
         val (entries, defaultId) = loadIndex(context)
         val entry = entries.firstOrNull { it.id == defaultId } ?: entries.first()
-        return resolve(context, entry)
+        val resolved = resolve(context, entry)
+        return resolved.copy(memoryMap = resolved.memoryMap.copy(matchesLoadedRom = false))
     }
 
     /** Looks up the profile whose crc32 list contains [crc32], or null if none match yet. */

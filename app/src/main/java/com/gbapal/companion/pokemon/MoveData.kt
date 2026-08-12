@@ -17,8 +17,11 @@ class MoveData private constructor(private val byMove: Map<Int, Entry>) {
     fun ppMax(moveId: Int): Int = byMove[moveId]?.ppMax ?: 0
     fun type(moveId: Int): String = byMove[moveId]?.type ?: "Normal"
     fun category(moveId: Int): String = byMove[moveId]?.category ?: "Status"
+    fun power(moveId: Int): Int = byMove[moveId]?.power ?: 0
+    fun accuracy(moveId: Int): Int = byMove[moveId]?.accuracy ?: 0
 
     companion object {
+        /** Shared fallback table; per-game data comes from the ROM via GameData. */
         fun load(context: Context): MoveData {
             val json = context.assets.open("move_data.json").bufferedReader().use { it.readText() }
             val obj = JSONObject(json)

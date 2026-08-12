@@ -1,12 +1,43 @@
 {
-  "_note": "Index of bundled per-game memory-map profiles. crc32s are the RetroArch GET_STATUS checksums (the actual ROM file's CRC32, not a header/title match) that identify each specific ROM/version -- populate as real crc32s are confirmed live. defaultProfileId is used whenever the live crc32 doesn't match any entry (unreleased patch, or a game with no profile yet).",
+  "_note": "Index of bundled game profiles, matched on the ROM file's CRC32 (from RetroArch GET_STATUS) rather than its internal header, so a hack is told apart from its base game and from other hacks. A profile describes where a ROM keeps its data; the app reads that data live, so adding a game costs a few KB. See docs/game-profiles.md. defaultProfileId is used when no crc32 matches.",
   "defaultProfileId": "unbound",
   "profiles": [
     {
       "id": "unbound",
       "displayName": "Pokemon Unbound",
       "asset": "game_profiles/unbound.json",
-      "crc32s": ["483D4957"]
+      "crc32s": [
+        "483D4957",
+        "4B3D4957"
+      ],
+      "_note": "4B3D4957 confirmed live 2026-08-04 as the crc32 RetroArch actually reports for a v2.1.1.1 Unbound ROM -- differs from the originally-registered 483D4957 (likely a different patch/build), which is kept in case that version is also still in circulation. A profile that doesn't match the loaded ROM's crc32 is treated as unrecognized and falls back to generic CFRU discovery, which got species/stats/item right by luck for this ROM but produced garbled ability names -- the fix is making sure the real crc32 is registered, not a code change."
+    },
+    {
+      "_note": "pokeemerald-expansion build. Party address 0x020375F8 and battleActiveFlag 0x0200069C both confirmed live on hardware 2026-07-30. Sprites read from gSpeciesInfo via pointerOffset.",
+      "id": "emerald-imperium",
+      "displayName": "Emerald Imperium",
+      "asset": "game_profiles/emerald-imperium.json",
+      "crc32s": [
+        "9C31CC4B"
+      ]
+    },
+    {
+      "id": "radical-red",
+      "displayName": "Pokemon Radical Red",
+      "asset": "game_profiles/radical-red.json",
+      "crc32s": [
+        "FBA55DD8"
+      ],
+      "_note": "v4.1, crc32 confirmed live 2026-08-09 via RetroArch GET_STATUS while the ROM was actually loaded."
+    },
+    {
+      "id": "emerald-rogue",
+      "displayName": "Emerald Rogue",
+      "asset": "game_profiles/emerald-rogue.json",
+      "crc32s": [
+        "1AFF85B4"
+      ],
+      "_note": "pokeemerald-expansion build with Rogue's own 'Revision Mode' rebalance layer on top. Species/stats/types/abilities/items/sprites/moves all read live, with speciesRevisedProfile and moveData (gBattleMoves_Revised) overriding the base tables where Rogue rebalances a species or move. Party addresses (0x02037688, 104-byte stride) confirmed live via static discovery."
     }
   ]
 }

@@ -1,5 +1,4 @@
 {
-  "unboundVersion": "2.1.1.1",
   "baseGame": "firered-us",
   "saveType": "flash-128k",
   "author": "Skeli789",
@@ -18,9 +17,9 @@
     }
   },
   "_confidence_levels": {
-    "firered-anchor": "Vanilla FireRed address from the pokefirered decomp / community RAM maps. NOT confirmed for Unbound \u2014 verify against a live read before trusting.",
+    "firered-anchor": "Vanilla FireRed address from the pokefirered decomp / community RAM maps. NOT confirmed for Unbound — verify against a live read before trusting.",
     "unbound-verified": "Confirmed against Unbound specifically (community GameShark code, or a live diff-scanner result that unambiguously matches a known value).",
-    "candidate": "Found via diff-scanner from ONE observed action. Plausible but not cross-verified \u2014 could be coincidental or part of an unrelated adjacent field. Needs a second, differently-shaped test before trusting."
+    "candidate": "Found via diff-scanner from ONE observed action. Plausible but not cross-verified — could be coincidental or part of an unrelated adjacent field. Needs a second, differently-shaped test before trusting."
   },
   "pointers": [
     {
@@ -143,6 +142,14 @@
     "confidence": "unbound-verified",
     "note": "Battle only. Confirmed 2026-07-22: decoded species/nicknames matched the real enemy team."
   },
+  "activeBattlers": {
+    "name": "gBattleMons",
+    "slotStride": 88,
+    "slotCount": 2,
+    "firstSlotAddress": "0x02023BE4",
+    "confidence": "unbound-verified",
+    "note": "Battle only. Index 0 is the player's current battler, index 1 the opponent's -- unlike party/enemyParty this updates the instant a Pokemon switches in or faints into the next one, so it's the right source for 'what's out right now'. Confirmed live 2026-07-30 across three switches: species (offset 0x00) tracked the player's active Pokemon through Metagross->Manectric->Infernape with zero misses, and index 1's species/level/currentHP/maxHP (offsets 0x00/0x2A/0x2C/0x28) matched a wild Pelipper exactly. Moves (offset 0x0C, 4x u16) and PP (offset 0x24, 4x u8) also confirmed against the active Pokemon's own party slot. Only the species field is actually used right now (to detect a switch and re-select the matching slot in the already-decoded enemy party, which has correct moves/ability/nickname); the rest of the struct is documented here for whenever a player-side 'active battler' view gets built."
+  },
   "overworldObjects": {
     "name": "gEventObjects (struct EventObject, CFRU naming)",
     "slotStride": 36,
@@ -216,7 +223,7 @@
       "size": 8,
       "confidence": "firered-anchor",
       "kind": "text",
-      "note": "Read as all zeros on real Unbound hardware 2026-07-22 \u2014 likely shifted, needs re-discovery via diff scanner."
+      "note": "Read as all zeros on real Unbound hardware 2026-07-22 — likely shifted, needs re-discovery via diff scanner."
     },
     {
       "name": "rivalName",
@@ -324,7 +331,7 @@
       "address": "0x0202656C",
       "size": 1,
       "confidence": "unbound-verified",
-      "note": "Confirmed 2026-07-22: using a Max Repel changed 0x00 -> 0xFA. 0xFA = 250 decimal, exactly the step count a Max Repel grants \u2014 strong, non-coincidental match. Try a regular Repel (should write 100/0x64) or Super Repel (200/0xC8) to double-confirm, and watch it count down while walking."
+      "note": "Confirmed 2026-07-22: using a Max Repel changed 0x00 -> 0xFA. 0xFA = 250 decimal, exactly the step count a Max Repel grants — strong, non-coincidental match. Try a regular Repel (should write 100/0x64) or Super Repel (200/0xC8) to double-confirm, and watch it count down while walking."
     },
     {
       "name": "battleStateFlag",
@@ -400,5 +407,81 @@
       "kind": "text",
       "note": "gStringVar4 per CFRU (address matches; size still a guess since CFRU's #define doesn't state a length). Same location-banner test as stringBuffer0."
     }
-  ]
+  ],
+  "dataTables": {
+    "speciesNames": {
+      "address": "0x0966A98C",
+      "stride": 11,
+      "count": 1280,
+      "text": {
+        "via": "inline",
+        "offset": "0x00",
+        "length": 11
+      }
+    },
+    "speciesStats": {
+      "address": "0x099E0C9C",
+      "stride": 28,
+      "count": 1280,
+      "layout": "gen3-species"
+    },
+    "moveNames": {
+      "address": "0x08A40A10",
+      "stride": 13,
+      "count": 2400,
+      "text": {
+        "via": "inline",
+        "offset": "0x00",
+        "length": 13
+      }
+    },
+    "moveData": {
+      "address": "0x08A769AF",
+      "stride": 12,
+      "count": 928,
+      "layout": "gen3-move-split"
+    },
+    "abilityNames": {
+      "address": "0x08A36398",
+      "stride": 17,
+      "count": 2400,
+      "text": {
+        "via": "inline",
+        "offset": "0x00",
+        "length": 17
+      }
+    },
+    "itemNames": {
+      "address": "0x08876200",
+      "stride": 44,
+      "count": 736,
+      "text": {
+        "via": "inline",
+        "offset": "0x00",
+        "length": 14
+      }
+    }
+  },
+  "typeNames": {
+    "0": "Normal",
+    "1": "Fighting",
+    "2": "Flying",
+    "3": "Poison",
+    "4": "Ground",
+    "5": "Rock",
+    "6": "Bug",
+    "7": "Ghost",
+    "8": "Steel",
+    "9": "Mystery",
+    "10": "Fire",
+    "11": "Water",
+    "12": "Grass",
+    "13": "Electric",
+    "14": "Psychic",
+    "15": "Ice",
+    "16": "Dragon",
+    "17": "Dark",
+    "23": "Fairy"
+  },
+  "version": "2.1.1.1"
 }

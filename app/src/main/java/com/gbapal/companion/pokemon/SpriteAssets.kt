@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import com.gbapal.companion.graphics.GbaTiles
 import com.gbapal.companion.graphics.Lz77
 import com.gbapal.companion.memory.MemoryMap
+import com.gbapal.companion.memory.PartyLayout
 import com.gbapal.companion.network.RetroArchClient
 import com.gbapal.companion.network.parseReadCoreMemoryResponse
 
@@ -33,41 +34,80 @@ object SpriteAssets {
         return bitmap
     }
 
+    /**
+     * Where to find one species' sprite or palette pointer: a base address, the
+     * stride between species, and how far into each entry the pointer sits.
+     */
+    private data class PointerSource(val base: Int, val stride: Int, val offset: Int)
+
+    /**
+     * A profile whose sprite layout isn't the classic 8-byte pointer table is
+     * describing something the header-pointer auto-resolution below cannot
+     * express (pokeemerald-expansion keeps its sprite pointers inside
+     * gSpeciesInfo), so in that case the profile has to win.
+     */
+    private fun PartyLayout?.isNonStandard(): Boolean =
+        this != null && (slotStride != 8 || pointerOffset != 0)
+
     private suspend fun decodeRomFrontSprite(client: RetroArchClient, map: MemoryMap, speciesId: Int): ImageBitmap? {
-        // Prefer resolving the tables live via the ROM's own header pointer
-        // table (works on any CFRU/DPE-based hack, not just the one a
-        // profile's hardcoded addresses were scanned for) -- only fall back
-        // to a profile's hardcoded addresses if that resolution fails.
-        val spriteTableAddress = RomSpeciesData.frontSpriteTableAddress(client)
-            ?: map.frontSpriteTable?.firstSlotAddress
-            ?: return null
-        val paletteTableAddress = RomSpeciesData.paletteTableAddress(client)
-            ?: map.paletteTable?.firstSlotAddress
-            ?: return null
+        val front = map.frontSpriteTable
+        val palette = map.paletteTable
 
-        val tileData = readCompressedBlock(client, spriteTableAddress, speciesId, SPRITE_DECOMPRESSED_SIZE) ?: return null
-        val paletteBytes = readCompressedBlock(client, paletteTableAddress, speciesId, PALETTE_DECOMPRESSED_SIZE) ?: return null
+        val spriteSource: PointerSource
+        val paletteSource: PointerSource
+        if (front.isNonStandard() || palette.isNonStandard()) {
+            // A non-standard layout only ever comes from a profile that was
+            // actually scanned for this shape (pokeemerald-expansion), so there
+            // is no live-discovery equivalent to fall back to here.
+            if (front == null || palette == null) return null
+            spriteSource = PointerSource(front.firstSlotAddress, front.slotStride, front.pointerOffset)
+            paletteSource = PointerSource(palette.firstSlotAddress, palette.slotStride, palette.pointerOffset)
+        } else {
+            // Standard Gen 3 pointer tables. The profile's own addresses win
+            // only when the profile is confirmed to match the loaded ROM --
+            // otherwise they are a different game's addresses, which read real
+            // but wrong bytes rather than failing cleanly, so the live
+            // header-pointer resolution has to take priority instead.
+            val spriteAddress = front?.firstSlotAddress.takeIf { map.matchesLoadedRom }
+                ?: FireRedHeaderPointers.frontSpriteTableAddress(client, map.engine)
+                ?: front?.firstSlotAddress
+                ?: return null
+            val paletteAddress = palette?.firstSlotAddress.takeIf { map.matchesLoadedRom }
+                ?: FireRedHeaderPointers.paletteTableAddress(client, map.engine)
+                ?: palette?.firstSlotAddress
+                ?: return null
+            spriteSource = PointerSource(spriteAddress, 8, 0)
+            paletteSource = PointerSource(paletteAddress, 8, 0)
+        }
 
-        val palette = GbaTiles.decodePalette(paletteBytes)
-        val pixels = GbaTiles.decode4bppSprite(tileData, palette, SPRITE_WIDTH, SPRITE_HEIGHT)
+        val tileData = readCompressedBlock(client, spriteSource, speciesId, SPRITE_DECOMPRESSED_SIZE) ?: return null
+        val paletteBytes = readCompressedBlock(client, paletteSource, speciesId, PALETTE_DECOMPRESSED_SIZE) ?: return null
+
+        val colours = GbaTiles.decodePalette(paletteBytes)
+        // Expansion stores two animation frames per front sprite, so the block
+        // decompresses to twice the size of one 64x64 image; truncating to the
+        // expected size keeps just the first frame, the Pokemon standing still.
+        // A no-op on the classic single-frame format, where the sizes match.
+        val firstFrame = tileData.copyOf(SPRITE_DECOMPRESSED_SIZE)
+        val pixels = GbaTiles.decode4bppSprite(firstFrame, colours, SPRITE_WIDTH, SPRITE_HEIGHT)
         return Bitmap.createBitmap(pixels, SPRITE_WIDTH, SPRITE_HEIGHT, Bitmap.Config.ARGB_8888).asImageBitmap()
     }
 
     /**
-     * Reads [tableAddress]'s 8-byte-stride entry for [speciesId] (just the
-     * leading 4-byte pointer -- size/tag aren't needed to load, only to
-     * identify the table), follows it, and decompresses the LZ77 block found
-     * there. Falls back to treating the read as a raw (uncompressed) block of
-     * [expectedSize] if it doesn't start with an LZ77 header, since some
-     * hacks store small blocks (like palettes) uncompressed.
+     * Reads the 4-byte ROM pointer for [speciesId] out of [source], follows it,
+     * and decompresses the LZ77 block found there. Any size/tag fields
+     * alongside the pointer are ignored -- they only matter for *identifying* a
+     * table, not for loading from one. Falls back to treating the read as a raw
+     * (uncompressed) block of [expectedSize] if it doesn't start with an LZ77
+     * header, since some hacks store small blocks (like palettes) uncompressed.
      */
     private suspend fun readCompressedBlock(
         client: RetroArchClient,
-        tableAddress: Int,
+        source: PointerSource,
         speciesId: Int,
         expectedSize: Int,
     ): ByteArray? {
-        val entryAddress = tableAddress + speciesId * 8
+        val entryAddress = source.base + speciesId * source.stride + source.offset
         val entryBytes = (client.readCoreMemory(entryAddress, 4) as? RetroArchClient.Result.Success)
             ?.let { parseReadCoreMemoryResponse(it.response) }
             ?: return null

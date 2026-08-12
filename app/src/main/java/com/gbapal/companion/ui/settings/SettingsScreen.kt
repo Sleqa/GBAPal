@@ -23,11 +23,18 @@ import com.gbapal.companion.ui.theme.MonoText
 import com.gbapal.companion.ui.theme.MonoTextMuted
 
 /**
- * Full-screen settings overlay. Currently just the QOL Mods toggle (heal
- * heart + repel toggle on the hub) -- more settings can grow here later.
+ * Full-screen settings overlay: the QOL Mods toggle (heal heart + repel
+ * toggle on the hub) and the opponent stat-comparison toggle. More settings
+ * can grow here later.
  */
 @Composable
-fun SettingsScreen(qolModsEnabled: Boolean, onQolModsChange: (Boolean) -> Unit, onClose: () -> Unit) {
+fun SettingsScreen(
+    qolModsEnabled: Boolean,
+    onQolModsChange: (Boolean) -> Unit,
+    statCompareEnabled: Boolean,
+    onStatCompareChange: (Boolean) -> Unit,
+    onClose: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -63,33 +70,54 @@ fun SettingsScreen(qolModsEnabled: Boolean, onQolModsChange: (Boolean) -> Unit, 
                 )
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { onQolModsChange(!qolModsEnabled) },
-                    )
-                    .padding(vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    MonoLabel(text = "QOL MODS", color = MonoText, fontSize = 16.sp)
-                    MonoLabel(
-                        text = "Heal button + infinite repel toggle on the hub",
-                        color = MonoTextMuted,
-                        fontSize = 11.sp,
-                    )
-                }
-                MonoLabel(
-                    text = if (qolModsEnabled) "ON" else "OFF",
-                    color = if (qolModsEnabled) MonoAccent else MonoTextMuted,
-                    fontSize = 15.sp,
-                )
-            }
+            SettingToggle(
+                title = "QOL MODS",
+                subtitle = "Heal button + infinite repel toggle on the hub",
+                enabled = qolModsEnabled,
+                onToggle = { onQolModsChange(!qolModsEnabled) },
+                modifier = Modifier.padding(top = 24.dp),
+            )
+
+            SettingToggle(
+                title = "STAT COMPARE",
+                subtitle = "Colour an opponent's stats against your active Pokemon",
+                enabled = statCompareEnabled,
+                onToggle = { onStatCompareChange(!statCompareEnabled) },
+            )
+
         }
+    }
+}
+
+/** One settings row: name, one-line explanation, and an ON/OFF state on the right. */
+@Composable
+private fun SettingToggle(
+    title: String,
+    subtitle: String,
+    enabled: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onToggle,
+            )
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            MonoLabel(text = title, color = MonoText, fontSize = 16.sp)
+            MonoLabel(text = subtitle, color = MonoTextMuted, fontSize = 11.sp)
+        }
+        MonoLabel(
+            text = if (enabled) "ON" else "OFF",
+            color = if (enabled) MonoAccent else MonoTextMuted,
+            fontSize = 15.sp,
+        )
     }
 }

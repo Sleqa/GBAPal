@@ -1,8 +1,8 @@
 # GBA Pal
 
-Android companion app for Pokemon Unbound (GBA), running via RetroArch's
-mGBA core. It talks to RetroArch's Network Command Interface (UDP, default
-port `55355`) to read live game memory and mirrors your run on a second
+Android companion app for GBA Pokemon games and ROM hacks, running via
+RetroArch's mGBA core. It talks to RetroArch's Network Command Interface (UDP,
+default port `55355`) to read live game memory and mirrors your run on a second
 screen: your party, the current opponent, and a detail view for every
 Pokemon. Built for dual-screen handhelds like the Ayn Thor, but works as a
 normal single-screen app too.
@@ -24,6 +24,23 @@ normal single-screen app too.
 - Pure black-and-white OLED-friendly theme — the only colour on screen is
   Pokemon type colour.
 
+## Supported games
+
+Games are recognised by the ROM file's CRC32 and read using a small **game
+profile** — a JSON file describing where that ROM keeps its species, move, item
+and sprite tables. The app then reads those tables live out of the loaded ROM,
+so a profile is a few kilobytes rather than a bundled copy of the game's data.
+
+Currently bundled: **Pokemon Unbound**, **Radical Red**, **Emerald Imperium**,
+**Emerald Rogue**.
+
+Nothing in the app is tied to a particular ROM base — profiles cover
+FireRed/CFRU binary hacks and pokeemerald-expansion decomp builds today, and the
+format can describe an engine the app has never seen as long as its tables are
+fixed-stride records. Adding a game needs no app code.
+
+See [docs/game-profiles.md](docs/game-profiles.md) to add one.
+
 ## Building
 
 ```
@@ -44,7 +61,7 @@ the committed defaults.
 
 1. In RetroArch: **Settings → Network → Network Commands** → enable, port
    `55355`.
-2. Load Pokemon Unbound with the mGBA core.
+2. Load a supported game with the mGBA core.
 3. Install this app on the same device (or a second screen) — the hub
    connects automatically and starts tracking your party.
 
