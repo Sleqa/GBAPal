@@ -1,4 +1,10 @@
 {
+  "id": "emerald-imperium",
+  "displayName": "Emerald Imperium",
+  "crc32s": [
+    "9C31CC4B"
+  ],
+  "_registrationNote": "pokeemerald-expansion build. Party address 0x020375F8 and battleActiveFlag 0x0200069C both confirmed live on hardware 2026-07-30. Sprites read from gSpeciesInfo via pointerOffset.",
   "_generated": {
     "by": "gbamap",
     "date": "2026-07-30",

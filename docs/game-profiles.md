@@ -12,29 +12,50 @@ real requirement is that its tables are **fixed-stride records**.
 The [gbamap](https://github.com/Sleqa/GBAPal) helper tool generates most of this
 automatically; drag a `.gba` onto its `ScanROM.bat` and it writes a profile.
 
-## Registering it
+## Where it goes
 
-Add an entry to `assets/game_profiles.json`. The app matches on the ROM file's
-CRC32, which `gbamap identify` prints:
+Drop the file in one of two places. There is nothing to register — the app
+discovers profiles by listing these folders, so no index, no shared file, and
+no app code mentions your game.
 
-```json
-{
-  "id": "my-hack",
-  "displayName": "My Hack",
-  "asset": "game_profiles/my-hack.json",
-  "crc32s": ["1AFF85B4"]
-}
-```
+| Location | Use it for |
+|---|---|
+| `app/src/main/assets/game_profiles/<your-game>.json` | Shipping a game with the app. |
+| `Android/data/com.gbapal.companion/files/game_profiles/<your-game>.json` on the device | Testing without rebuilding. |
+
+A drop-in file on the device wins over a bundled profile with the same `id`, so
+you can iterate on your own game — or correct a wrong address in a shipped one —
+without touching any other game. A profile that fails to parse is skipped with a
+warning in logcat and everything else keeps working, so a half-written file can
+never take the app down.
 
 ## The profile
 
 ### Required
 
+Genuinely all of it:
+
+```json
+{
+  "displayName": "Pokemon Oddesy",
+  "crc32s": ["1AFF85B4"],
+  "party":      { "firstSlotAddress": "0x02024284", "slotStride": 100, "slotCount": 6 },
+  "enemyParty": { "firstSlotAddress": "0x0202402C", "slotStride": 100, "slotCount": 6 }
+}
+```
+
 | Key | Meaning |
 |---|---|
-| `baseGame` | e.g. `firered-us`, `emerald-us`. Informational. |
+| `displayName` | Shown once the ROM is recognised. |
+| `crc32s` | CRC32 of each ROM build this describes, which `gbamap identify` prints. Version-exact: a new patch is a new CRC32, added to this list. |
 | `party` / `enemyParty` | Where the six 100-byte party structs start. |
-| `anchors` | Named single values (see below). May be empty. |
+
+`id` defaults to the filename, so `oddesy.json` needs no `id`. Everything below
+is optional — anything you leave out is simply a feature the app skips for your
+game, never a wrong guess.
+
+Set `"isDefault": true` if your profile should be the one used before any ROM is
+identified. Exactly one bundled profile should have it.
 
 ### Party layouts
 

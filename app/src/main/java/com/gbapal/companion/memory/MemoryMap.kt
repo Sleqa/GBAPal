@@ -34,6 +34,29 @@ data class PartyLayout(
 )
 
 data class MemoryMap(
+    /**
+     * Stable identifier, defaulting to the profile's own filename. Only used to
+     * tell one profile from another (caching, and letting a dropped-in file
+     * override a bundled game of the same id).
+     */
+    val id: String,
+    /** Shown to the player once a ROM is recognised, e.g. "Pokemon Radical Red". */
+    val displayName: String,
+    /**
+     * CRC32s of the exact ROM files this profile describes, from RetroArch's
+     * GET_STATUS. Checked rather than the ROM's internal header because a hack
+     * usually leaves the header of whatever game it was built from, so the
+     * header cannot tell a hack apart from its base game or from another hack.
+     * Version-exact by nature: a new patch of the same hack is a new CRC32 and
+     * gets added to this list.
+     */
+    val crc32s: List<Long>,
+    /**
+     * Whether this profile is the one to fall back on before any ROM has been
+     * identified. Exactly one bundled profile sets it; if none does, the first
+     * discovered profile is used, so the app always has something to show.
+     */
+    val isDefault: Boolean,
     val version: String,
     val baseGame: String,
     /**
@@ -116,15 +139,22 @@ data class MemoryMap(
             firstSlotAddress = obj.getString("firstSlotAddress").parseHex(),
             slotStride = obj.getInt("slotStride"),
             slotCount = obj.optInt("slotCount", 0),
-            confidence = obj.getString("confidence"),
+            // Documentation fields, so they are optional: a profile is judged
+            // on whether its addresses work, and making someone write
+            // "confidence" before the app will load their file is friction for
+            // no gain.
+            confidence = obj.optString("confidence").ifEmpty { "unverified" },
             note = if (obj.has("note")) obj.getString("note") else null,
             pointerOffset = if (obj.has("pointerOffset")) obj.getString("pointerOffset").parseHex() else 0,
         )
 
-        /** Loads a bundled per-game memory map, e.g. "game_profiles/unbound.json". */
-        fun load(context: Context, assetPath: String): MemoryMap {
-            val json = context.assets.open(assetPath)
-                .bufferedReader().use { it.readText() }
+        /**
+         * Parses one profile. [id] is the fallback identity for a file that
+         * does not name itself -- [GameProfiles] passes the filename, which is
+         * what makes `oddesy.json` a complete, working profile with no
+         * registration step anywhere else.
+         */
+        fun parse(json: String, id: String): MemoryMap {
             val root = JSONObject(json)
 
             val party = parseLayout(root.getJSONObject("party"))
@@ -148,24 +178,33 @@ data class MemoryMap(
                 }.toMap()
             } ?: emptyMap()
 
-            val anchorsArr = root.getJSONArray("anchors")
-            val anchors = (0 until anchorsArr.length()).map { i ->
-                val a = anchorsArr.getJSONObject(i)
+            // Optional: a profile that maps no anchors yet is still perfectly
+            // usable, it just skips the features that need them.
+            val anchorsArr = root.optJSONArray("anchors")
+            val anchors = (0 until (anchorsArr?.length() ?: 0)).map { i ->
+                val a = anchorsArr!!.getJSONObject(i)
                 Anchor(
                     name = a.getString("name"),
                     address = a.getString("address").parseHex(),
                     size = a.getInt("size"),
-                    confidence = a.getString("confidence"),
+                    confidence = a.optString("confidence").ifEmpty { "unverified" },
                     note = if (a.has("note")) a.getString("note") else null,
                     kind = if (a.has("kind")) a.getString("kind") else "bytes",
                 )
             }
 
+            val crc32Arr = root.optJSONArray("crc32s")
+            val crc32s = (0 until (crc32Arr?.length() ?: 0)).mapNotNull { i ->
+                crc32Arr!!.getString(i).removePrefix("0x").toLongOrNull(16)
+            }
+
             return MemoryMap(
-                // "unboundVersion" is the original key name from when this app
-                // only supported one game; still read so existing profiles load.
-                version = root.optString("version").ifEmpty { root.optString("unboundVersion", "unknown") },
-                baseGame = root.getString("baseGame"),
+                id = root.optString("id").ifEmpty { id },
+                displayName = root.optString("displayName").ifEmpty { id },
+                crc32s = crc32s,
+                isDefault = root.optBoolean("isDefault", false),
+                version = root.optString("version", "unknown"),
+                baseGame = root.optString("baseGame", "unknown"),
                 engine = if (root.has("engine")) root.getString("engine") else null,
                 dataTables = dataTables,
                 typeNames = typeNames,

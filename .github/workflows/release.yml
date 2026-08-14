@@ -23,12 +23,13 @@ jobs:
       - name: Set version
         id: version
         run: |
-          # v1.0.0 was the first public beta, built by this workflow's run
-          # #77 -- patch counts up from 0 from that point so future public
-          # betas read as 1.0.1, 1.0.2, etc. instead of jumping straight to
-          # a run-number-sized patch version.
-          patch=$(( ${{ github.run_number }} - 77 ))
-          echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          # v1.0.0 was shipped manually as the first public release, before
+          # this workflow ever ran -- so run #1 here produces 1.0.1, and the
+          # patch keeps counting up from there. versionCode is offset the
+          # same amount past v1.0.0's (40), so a device on the manual release
+          # always sees every automated build as a newer version.
+          patch=${{ github.run_number }}
+          echo "code=$(( 40 + ${{ github.run_number }} ))" >> "$GITHUB_OUTPUT"
           echo "name=1.0.${patch}" >> "$GITHUB_OUTPUT"
 
       - name: Build release APK

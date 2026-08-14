@@ -1,4 +1,12 @@
 {
+  "id": "unbound",
+  "displayName": "Pokemon Unbound",
+  "crc32s": [
+    "483D4957",
+    "4B3D4957"
+  ],
+  "isDefault": true,
+  "_registrationNote": "4B3D4957 confirmed live 2026-08-04 as the crc32 RetroArch actually reports for a v2.1.1.1 Unbound ROM -- differs from the originally-registered 483D4957 (likely a different patch/build), which is kept in case that version is also still in circulation. A profile that doesn't match the loaded ROM's crc32 is treated as unrecognized and falls back to generic CFRU discovery, which got species/stats/item right by luck for this ROM but produced garbled ability names -- the fix is making sure the real crc32 is registered, not a code change.",
   "baseGame": "firered-us",
   "saveType": "flash-128k",
   "author": "Skeli789",

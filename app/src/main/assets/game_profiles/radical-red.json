@@ -1,4 +1,10 @@
 {
+  "id": "radical-red",
+  "displayName": "Pokemon Radical Red",
+  "crc32s": [
+    "FBA55DD8"
+  ],
+  "_registrationNote": "v4.1, crc32 confirmed live 2026-08-09 via RetroArch GET_STATUS while the ROM was actually loaded.",
   "baseGame": "firered-us",
   "engine": "cfru",
   "_note": "Pokemon Radical Red 4.1, CFRU-based like Unbound. Party/enemyParty/activeBattlers addresses are the standard CFRU ones (identical to unbound.json) -- confirmed live 2026-08-09 by decoding a real in-battle party (Sprigatito, species 921) and enemy (Bidoof, species 452) with correct nickname/level/stats/moves/PP. dataTables addresses were live-scanned specifically for this ROM (crc32 fba55dd8): the generic unregistered-hack fallback (FireRedLiveData) gets species/base-stats/items right by luck via the boot-header-pointer trick and CFRU's stable 28-byte species struct, but has no way to find move/ability *names* beyond vanilla FireRed's original ~78/~354 entries, since Radical Red's much larger expanded tables for those live at addresses the header table doesn't point to. That's what showed up as Bidoof's ability rendering as '?????' and (separately, believed to be FireRedLiveData's table-resolution failure getting permanently cached after a one-off network hiccup -- see Gen3Text.looksLikeName and FireRedLiveData's resolveTables retry fix) Sprigatito showing wrong species data entirely.",

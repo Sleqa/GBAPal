@@ -1,4 +1,10 @@
 {
+  "id": "emerald-rogue",
+  "displayName": "Emerald Rogue",
+  "crc32s": [
+    "1AFF85B4"
+  ],
+  "_registrationNote": "pokeemerald-expansion build with Rogue's own 'Revision Mode' rebalance layer on top. Species/stats/types/abilities/items/sprites/moves all read live, with speciesRevisedProfile and moveData (gBattleMoves_Revised) overriding the base tables where Rogue rebalances a species or move. Party addresses (0x02037688, 104-byte stride) confirmed live via static discovery.",
   "_generated": {
     "by": "gbamap",
     "date": "2026-07-30",
@@ -213,11 +219,26 @@
       "stride": 28,
       "count": 1000,
       "fields": {
-        "power": { "offset": "0x02", "size": 1 },
-        "type": { "offset": "0x03", "size": 1 },
-        "accuracy": { "offset": "0x04", "size": 1 },
-        "pp": { "offset": "0x05", "size": 1 },
-        "category": { "offset": "0x0B", "size": 1 }
+        "power": {
+          "offset": "0x02",
+          "size": 1
+        },
+        "type": {
+          "offset": "0x03",
+          "size": 1
+        },
+        "accuracy": {
+          "offset": "0x04",
+          "size": 1
+        },
+        "pp": {
+          "offset": "0x05",
+          "size": 1
+        },
+        "category": {
+          "offset": "0x0B",
+          "size": 1
+        }
       },
       "note": "gBattleMoves_Revised -- Rogue's 'Revision Mode' move table, used whenever a run is active (the normal play state). gBattleMoves_Mainline sits 22112 bytes earlier and holds vanilla-balance stats for the same moves; found and disambiguated the same way as speciesRevisedProfile, using Cut's rebalance (50/Normal/95 -> 60/Grass/100) as the distinguishing anchor since most moves are identical between the two tables."
     },

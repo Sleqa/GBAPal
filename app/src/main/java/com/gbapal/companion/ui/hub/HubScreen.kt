@@ -2,8 +2,6 @@ package com.gbapal.companion.ui.hub
 
 import android.content.Context
 import android.os.BatteryManager
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,10 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,7 +51,6 @@ import com.gbapal.companion.pokemon.NameTables
 import com.gbapal.companion.pokemon.PartyDecoder
 import com.gbapal.companion.pokemon.PartySlot
 import com.gbapal.companion.pokemon.RomDataReader
-import com.gbapal.companion.pokemon.SpriteAssets
 import com.gbapal.companion.ui.detail.PokemonDetailScreen
 import com.gbapal.companion.ui.opponent.OpponentScreen
 import com.gbapal.companion.ui.settings.SettingsScreen
@@ -65,7 +58,6 @@ import com.gbapal.companion.ui.theme.MonoAccent
 import com.gbapal.companion.ui.theme.MonoBg
 import com.gbapal.companion.ui.theme.MonoLabel
 import com.gbapal.companion.ui.theme.MonoText
-import com.gbapal.companion.ui.theme.MonoTextMuted
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -261,8 +253,14 @@ fun HubScreen() {
     val lifecycleOwner = LocalLifecycleOwner.current
     val client = remember { RetroArchClient() }
     val scope = rememberCoroutineScope()
-    var gameProfile by remember { mutableStateOf(GameProfiles.default(context)) }
-    val map = gameProfile.memoryMap
+    // Null only if no profile was discovered at all, which means the bundled
+    // ones failed to package -- worth saying plainly rather than crashing on
+    // a force-unwrap.
+    var detectedProfile by remember { mutableStateOf(GameProfiles.default(context)) }
+    val map = detectedProfile ?: run {
+        MonoLabel("No game profiles found.", color = MonoText, fontSize = 14.sp)
+        return
+    }
     // The bundled tables are the shared fallback for anything a profile does
     // not describe; GameData prefers the live ROM over them. Rebuilt on a
     // profile swap so no cached value leaks between games.
@@ -496,14 +494,14 @@ fun HubScreen() {
                 ?.let { parseGetStatusResponse(it.response) }
             if (status != null) {
                 val matched = GameProfiles.forCrc32(context, status.crc32)
-                // Reassigns even when the id is unchanged: the starting
-                // gameProfile is the *untrusted* default (matchesLoadedRom =
-                // false), and a genuine crc32 match -- even one that happens to
-                // resolve to the same profile -- is what upgrades it to
-                // trusted. Cheap to over-assign: MemoryMap is a data class, so
-                // Compose skips recomposition when the value is unchanged.
+                // Reassigns even when the id is unchanged: the starting profile
+                // is the *untrusted* default (matchesLoadedRom = false), and a
+                // genuine crc32 match -- even one that happens to resolve to the
+                // same profile -- is what upgrades it to trusted. Cheap to
+                // over-assign: MemoryMap is a data class, so Compose skips
+                // recomposition when the value is unchanged.
                 if (matched != null) {
-                    gameProfile = matched
+                    detectedProfile = matched
                 }
             }
             delay(GAME_DETECT_POLL_INTERVAL_MS)
@@ -656,228 +654,6 @@ fun HubScreen() {
     }
 }
 
-/**
- * Up to six Pokemon laid out as three centered rows of two: the middle row
- * sits at the vertical center of [modifier]'s available height, and the top
- * and bottom rows space out symmetrically to fill the rest of it. Within a
- * row, the pair is compressed toward the horizontal center rather than
- * spread across the full width.
- */
-@Composable
-internal fun PartyGrid(
-    mons: List<HubMon>,
-    client: RetroArchClient,
-    map: MemoryMap,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.SpaceEvenly,
-    ) {
-        mons.chunked(2).forEachIndexed { rowIndex, rowMons ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
-            ) {
-                rowMons.forEachIndexed { colIndex, mon ->
-                    MonEntry(mon, client, map) { onSelect(rowIndex * 2 + colIndex) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun MonEntry(mon: HubMon, client: RetroArchClient, map: MemoryMap, onClick: () -> Unit) {
-    var sprite by remember(mon.speciesId, map) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(mon.speciesId, map) {
-        sprite = SpriteAssets.romFrontSprite(client, map, mon.speciesId)
-    }
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-            onClick = onClick,
-        ),
-    ) {
-        val currentSprite = sprite
-        if (currentSprite != null) {
-            Image(
-                bitmap = currentSprite,
-                contentDescription = null,
-                filterQuality = FilterQuality.None,
-                modifier = Modifier.size(68.dp),
-            )
-        } else {
-            Box(modifier = Modifier.size(68.dp), contentAlignment = Alignment.Center) {
-                MonoLabel("?", color = MonoTextMuted, fontSize = 20.sp)
-            }
-        }
-        MonoLabel(mon.nickname.uppercase(), color = MonoText, fontSize = 15.sp)
-        MonoLabel("Lv${mon.level}", color = MonoTextMuted, fontSize = 13.sp)
-    }
-}
-
-// 9x5 pixel-art battery outline, same blocky style as the heart/wrench: a
-// hollow body (cols 0-7) with a single-pixel cap at col 8, row 2. The hollow
-// interior (cols 1-6, rows 1-3) is where the charge fill bars get drawn in,
-// column by column, proportional to [percent].
-private val BATTERY_PIXEL_ROWS = listOf(
-    "011111100",
-    "100000010",
-    "100000011",
-    "100000010",
-    "011111100",
-)
-private val BATTERY_INTERIOR_COLS = 1..6
-private val BATTERY_INTERIOR_ROWS = 1..3
-
-/** Pixel battery glyph: outline always drawn, filled columns scale with [percent]. */
-@Composable
-private fun BatteryIcon(percent: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Canvas(modifier = Modifier.size(width = 26.dp, height = 14.dp)) {
-            val cols = BATTERY_PIXEL_ROWS[0].length
-            val rows = BATTERY_PIXEL_ROWS.size
-            val pixelWidth = size.width / cols
-            val pixelHeight = size.height / rows
-            BATTERY_PIXEL_ROWS.forEachIndexed { row, line ->
-                line.forEachIndexed { col, ch ->
-                    if (ch == '1') {
-                        drawRect(
-                            color = MonoAccent,
-                            topLeft = Offset(col * pixelWidth, row * pixelHeight),
-                            size = Size(pixelWidth, pixelHeight),
-                        )
-                    }
-                }
-            }
-            val filledCols = (BATTERY_INTERIOR_COLS.count() * (percent.coerceIn(0, 100) / 100f)).toInt()
-            for (i in 0 until filledCols) {
-                val col = BATTERY_INTERIOR_COLS.first + i
-                for (row in BATTERY_INTERIOR_ROWS) {
-                    drawRect(
-                        color = MonoAccent,
-                        topLeft = Offset(col * pixelWidth, row * pixelHeight),
-                        size = Size(pixelWidth, pixelHeight),
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.width(4.dp))
-        MonoLabel("$percent%", color = MonoText, fontSize = 14.sp)
-    }
-}
-
-// Heal is the one exception to Mono's otherwise strict black/white palette
-// (see MonoTheme's doc comment) -- proper colour is what lets HealHeart's
-// colour double as its own enabled/disabled signal.
-private val HealRed = Color(0xFFE24C4C)
-
-// 7x6 pixel-art heart, NES-style: 1 = filled pixel, 0 = empty.
-private val HEART_PIXEL_ROWS = listOf(
-    "0110110",
-    "1111111",
-    "1111111",
-    "0111110",
-    "0011100",
-    "0001000",
-)
-
-/** Pixel heart heal button. Greyscale and inert while [enabled] is false (in battle). */
-@Composable
-private fun HealHeart(enabled: Boolean, onClick: () -> Unit) {
-    val color = if (enabled) HealRed else MonoTextMuted
-    Canvas(
-        modifier = Modifier
-            .size(width = 28.dp, height = 24.dp)
-            .clickable(
-                enabled = enabled,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            ),
-    ) {
-        val cols = HEART_PIXEL_ROWS[0].length
-        val rows = HEART_PIXEL_ROWS.size
-        val pixelWidth = size.width / cols
-        val pixelHeight = size.height / rows
-        HEART_PIXEL_ROWS.forEachIndexed { row, line ->
-            line.forEachIndexed { col, ch ->
-                if (ch == '1') {
-                    drawRect(
-                        color = color,
-                        topLeft = Offset(col * pixelWidth, row * pixelHeight),
-                        size = Size(pixelWidth, pixelHeight),
-                    )
-                }
-            }
-        }
-    }
-}
-
-/** Small on/off label for the infinite-repel toggle: accent when active, muted when off. */
-@Composable
-private fun RepelToggle(enabled: Boolean, onToggle: () -> Unit) {
-    MonoLabel(
-        text = if (enabled) "REPEL ●" else "REPEL ○",
-        color = if (enabled) MonoAccent else MonoTextMuted,
-        fontSize = 13.sp,
-        modifier = Modifier
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onToggle,
-            )
-            .padding(6.dp),
-    )
-}
-
-// 8x8 pixel-art wrench, same blocky style as the heart: open jaw top-left,
-// diagonal shaft down to the bottom-right.
-private val WRENCH_PIXEL_ROWS = listOf(
-    "00011000",
-    "00111100",
-    "01100110",
-    "00110000",
-    "00011000",
-    "00110000",
-    "01100000",
-    "11000000",
-)
-
-/** Pixel wrench settings icon, top-right of the hub. Always enabled. */
-@Composable
-private fun SettingsWrench(onClick: () -> Unit) {
-    Canvas(
-        modifier = Modifier
-            .size(22.dp)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            ),
-    ) {
-        val cols = WRENCH_PIXEL_ROWS[0].length
-        val rows = WRENCH_PIXEL_ROWS.size
-        val pixelWidth = size.width / cols
-        val pixelHeight = size.height / rows
-        WRENCH_PIXEL_ROWS.forEachIndexed { row, line ->
-            line.forEachIndexed { col, ch ->
-                if (ch == '1') {
-                    drawRect(
-                        color = MonoAccent,
-                        topLeft = Offset(col * pixelWidth, row * pixelHeight),
-                        size = Size(pixelWidth, pixelHeight),
-                    )
-                }
-            }
-        }
-    }
-}
 
 private fun batteryPercent(context: Context): Int {
     val bm = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager

@@ -1,47 +1,76 @@
 # GBA Pal
 
-Android companion app for GBA Pokemon games and ROM hacks, running via
-RetroArch's mGBA core. It talks to RetroArch's Network Command Interface (UDP,
-default port `55355`) to read live game memory and mirrors your run on a second
-screen: your party, the current opponent, and a detail view for every
-Pokemon. Built for dual-screen handhelds like the Ayn Thor, but works as a
-normal single-screen app too.
+An Android companion app for GBA Pokemon games and ROM hacks. It reads live
+game memory straight out of RetroArch while you play and mirrors your run on
+a second screen — your party, whoever you're fighting, and a full detail view
+for any Pokemon, all updating in real time as the battle happens. Built for
+dual-screen handhelds like the Ayn Thor, but it works fine as a normal
+single-screen app too — run it on a phone next to your emulator.
 
 <p>
-  <img src="docs/screenshots/hub.png" width="45%" alt="Hub screen showing the player's party of six Pokemon" />
+  <img src="docs/screenshots/opponent-party.png" width="45%" alt="Opponent screen showing the enemy trainer's party of six Pokemon" />
   &nbsp;&nbsp;
-  <img src="docs/screenshots/pokemon-detail.png" width="45%" alt="Pokemon detail screen showing stats, moves, and type match-ups" />
+  <img src="docs/screenshots/pokemon-detail-stats.png" width="45%" alt="Pokemon detail screen showing stats, moves, and type match-ups" />
+</p>
+<p>
+  <img src="docs/screenshots/pokemon-detail-durant.png" width="45%" alt="Detail screen with stat colouring against the opponent, and a swap button" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/pokedex-popup.png" width="45%" alt="Pokedex popup describing an ability" />
 </p>
 
 ## Features
 
-- **Hub** — your live party at a glance: sprites, nicknames, and levels,
+- **Hub** — your live party at a glance: sprites, nicknames, levels, and HP,
   polled straight from game memory.
-- **Auto opponent view** — pops open automatically when a battle starts and
-  returns to the hub once the battle ends, no manual switching needed.
-- **Pokemon detail** — stats, full moveset with PP, held item, ability, and
-  type weaknesses/resistances for any party or opponent Pokemon.
-- Pure black-and-white OLED-friendly theme — the only colour on screen is
+- **Auto opponent view** — pops open the moment a battle starts and closes
+  itself once it's over, no manual switching. Shows the enemy's whole team,
+  not just whichever one is currently out.
+- **Pokemon detail** — stats, full moveset with PP/power/accuracy and a
+  physical/special/status icon per move, held item, ability, and type
+  weaknesses/resistances, for any Pokemon on either side.
+- **Stat compare** — an opponent's stats are coloured red where they beat
+  your active Pokemon and green where they lose, live stat stage changes
+  (that Swords Dance, that Intimidate) included.
+- **Tap-to-describe Pokedex** — tap a Pokemon's name, ability, held item, or
+  any move for what it actually does, including how that Pokemon evolves.
+  Looked up once, cached on the device, works offline after that.
+- **Quick actions** — a heal button (full HP and PP, blocked mid-battle so
+  it can't be used as a move) and an infinite Repel toggle, both optional
+  from Settings.
+- Pure black-and-white, OLED-friendly theme. The only colour on screen is
   Pokemon type colour.
 
 ## Supported games
 
+Currently bundled: **Pokemon Unbound**, **Radical Red**, **Emerald
+Imperium**, **Emerald Rogue**.
+
 Games are recognised by the ROM file's CRC32 and read using a small **game
-profile** — a JSON file describing where that ROM keeps its species, move, item
-and sprite tables. The app then reads those tables live out of the loaded ROM,
-so a profile is a few kilobytes rather than a bundled copy of the game's data.
+profile** — one JSON file per game describing where that ROM keeps its data,
+which the app then reads live out of the loaded ROM. Nothing about the app is
+tied to a particular ROM base, and adding a game needs no app code — see
+[docs/game-profiles.md](docs/game-profiles.md).
 
-Currently bundled: **Pokemon Unbound**, **Radical Red**, **Emerald Imperium**,
-**Emerald Rogue**.
+## Setting it up
 
-Nothing in the app is tied to a particular ROM base — profiles cover
-FireRed/CFRU binary hacks and pokeemerald-expansion decomp builds today, and the
-format can describe an engine the app has never seen as long as its tables are
-fixed-stride records. Adding a game needs no app code.
+1. **Install [RetroArch](https://www.retroarch.com/)** and get the **mGBA**
+   core through its core downloader.
+   > The Network Command Interface this app relies on is fairly recent —
+   > if it doesn't seem to be working, grab RetroArch's
+   > [nightly build](https://buildbot.libretro.com/nightly/) instead of
+   > the stable release. Stable should catch up eventually.
+2. In RetroArch: **Settings → Network → Network Commands** → enable it,
+   port `55355`.
+3. Load one of the supported games with the mGBA core.
+4. Install GBAPal (see [Releases](../../releases)) and open it. It finds
+   RetroArch automatically and starts tracking your party — no setup inside
+   the app itself.
 
-See [docs/game-profiles.md](docs/game-profiles.md) to add one.
+If GBAPal is on a different device than RetroArch (a second screen, a
+handheld's other display), both just need to be reachable over the same
+network.
 
-## Building
+## Building from source
 
 ```
 ./gradlew assembleDebug   # debug build
@@ -49,33 +78,24 @@ See [docs/game-profiles.md](docs/game-profiles.md) to add one.
 ```
 
 `assembleRelease` is signed with the keystore committed at
-`keystore/release.keystore`. It's intentionally not a secret — this is a
-personal, read-only companion app with nothing sensitive in it. The only
-reason it's fixed is so Obtainium/sideloaded updates install in place
-instead of forcing an uninstall (which a changing signature would require).
-If you ever want a private key instead, override it with Gradle properties
-(`-PreleaseStoreFile=... -PreleaseStorePassword=...` etc.) without touching
-the committed defaults.
-
-## Using with RetroArch
-
-1. In RetroArch: **Settings → Network → Network Commands** → enable, port
-   `55355`.
-2. Load a supported game with the mGBA core.
-3. Install this app on the same device (or a second screen) — the hub
-   connects automatically and starts tracking your party.
-
-## Usage of AI
-
-  AI was obviously used to make this app. I by no means have any real coding experience, this is simply something I personally wanted to build
-  for my playthroughs of Pokemon Rom Hacks and thought others may enjoy using it too.
+`keystore/release.keystore`. That's intentional, not an oversight — this is
+a personal, read-only companion app with nothing sensitive in it, and a
+fixed key is what lets Obtainium/sideloaded updates install in place instead
+of forcing an uninstall each time. Override it with Gradle properties
+(`-PreleaseStoreFile=... -PreleaseStorePassword=...`) if you'd rather sign
+with your own.
 
 ## Installing updates via Obtainium
 
-Public releases are cut manually (not on every push to `main`), so the
-public build only ever advances when something is actually ready to ship.
 Add this repo to [Obtainium](https://github.com/ImranR98/Obtainium) as a
-GitHub source to track and auto-update from those releases (tag
-`v1.0.<release number>`). Private test builds (also triggered manually, for
-testing only) are published as draft releases, which stay off the public
-releases page and out of Obtainium's feed.
+GitHub source to track and auto-update from [Releases](../../releases).
+
+## About the AI in this
+
+I built this with a lot of help from AI — I don't have real software
+development experience, and this app wouldn't exist without it. I wanted
+something like this for my own Pokemon ROM hack playthroughs, and once it
+was working, it seemed worth sharing rather than keeping to myself. If
+nobody else ever uses it, that's fine — I built it for me first, and I'll
+keep using and improving it either way. I'd just rather be upfront about how
+it was made than pretend otherwise.

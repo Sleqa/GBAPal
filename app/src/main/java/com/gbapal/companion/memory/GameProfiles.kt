@@ -1,85 +1,95 @@
 package com.gbapal.companion.memory
 
 import android.content.Context
-import org.json.JSONObject
-
-/** One entry from assets/game_profiles.json -- a bundled memory map and the ROM crc32s it applies to. */
-private data class GameProfileEntry(
-    val id: String,
-    val displayName: String,
-    val asset: String,
-    val crc32s: List<Long>,
-)
-
-/** A game profile with its memory map already loaded, ready to use. */
-data class ResolvedGameProfile(
-    val id: String,
-    val displayName: String,
-    val memoryMap: MemoryMap,
-)
+import android.util.Log
+import java.io.File
 
 /**
- * Bundled per-game memory-map profiles, resolved by the ROM's crc32 (see
- * RetroArchClient.getStatus / parseGetStatusResponse). Unlike a game's internal
- * header (title/game code), crc32 is a checksum of the exact ROM file, so it
- * tells hacks apart from their base game and from each other -- at the cost of
- * being version-exact: every new patch needs its crc32 added here once seen.
- * Until a crc32 is known, [default] is used, so the app still works exactly
- * as before profiles existed.
+ * Finds the per-game profiles the app can use, by discovery rather than
+ * registration.
+ *
+ * Adding a game is exactly one file: drop `<game>.json` into
+ * `assets/game_profiles/` (bundled) or into the app's external
+ * `game_profiles/` folder on the device (drop-in, see [externalDir]). Nothing
+ * else references it -- the profile names itself and lists the ROM CRC32s it
+ * applies to, so there is no index to edit, no id to register, and no shared
+ * file that two people adding two different games could conflict in.
+ *
+ * A drop-in file beats a bundled one with the same id, which is what makes it
+ * possible to iterate on a profile for one game -- or fix a wrong address in a
+ * shipped one -- without rebuilding the app or touching any other game.
  */
 object GameProfiles {
-    private var cachedEntries: List<GameProfileEntry>? = null
-    private var cachedDefaultId: String? = null
-    private val memoryMapCache = mutableMapOf<String, MemoryMap>()
+    private const val TAG = "GameProfiles"
+    private const val DIR = "game_profiles"
 
-    private fun loadIndex(context: Context): Pair<List<GameProfileEntry>, String> {
-        cachedEntries?.let { entries -> return entries to cachedDefaultId!! }
+    private var cached: List<MemoryMap>? = null
 
-        val json = context.assets.open("game_profiles.json").bufferedReader().use { it.readText() }
-        val root = JSONObject(json)
-        val defaultId = root.getString("defaultProfileId")
-        val arr = root.getJSONArray("profiles")
-        val entries = (0 until arr.length()).map { i ->
-            val p = arr.getJSONObject(i)
-            val crcArr = p.getJSONArray("crc32s")
-            val crcs = (0 until crcArr.length()).map { j -> crcArr.getString(j).removePrefix("0x").toLong(16) }
-            GameProfileEntry(
-                id = p.getString("id"),
-                displayName = p.getString("displayName"),
-                asset = p.getString("asset"),
-                crc32s = crcs,
-            )
-        }
+    /**
+     * Where drop-in profiles live: `Android/data/<package>/files/game_profiles`
+     * on the device's shared storage. App-scoped, so it needs no storage
+     * permission, and it survives app updates.
+     */
+    fun externalDir(context: Context): File? = context.getExternalFilesDir(DIR)
 
-        cachedEntries = entries
-        cachedDefaultId = defaultId
-        return entries to defaultId
-    }
+    /** Every discovered profile, drop-in files taking precedence over bundled ones. */
+    fun all(context: Context): List<MemoryMap> = cached ?: buildList {
+        addAll(loadBundled(context))
+        // Added second and de-duplicated by id below, so a drop-in file
+        // shadows the bundled game it shares an id with.
+        addAll(loadExternal(context))
+    }.reversed().distinctBy { it.id }.also { cached = it }
 
-    private fun resolve(context: Context, entry: GameProfileEntry): ResolvedGameProfile {
-        val map = memoryMapCache.getOrPut(entry.id) { MemoryMap.load(context, entry.asset) }
-        return ResolvedGameProfile(entry.id, entry.displayName, map)
+    /** Forgets discovered profiles so a newly dropped-in file is picked up. */
+    fun refresh() {
+        cached = null
     }
 
     /**
-     * The profile used until/unless a live crc32 match resolves a different one.
-     *
-     * Marked [MemoryMap.matchesLoadedRom] = false: this is a guess to have
-     * *something* to show before the ROM is even identified, not a claim that
-     * whatever game is actually loaded is this one. See that flag's doc for why
-     * the distinction matters.
+     * The profile for the ROM currently loaded, or null if its CRC32 matches
+     * nothing -- callers should prefer ROM-agnostic discovery over another
+     * game's addresses in that case (see [MemoryMap.matchesLoadedRom]).
      */
-    fun default(context: Context): ResolvedGameProfile {
-        val (entries, defaultId) = loadIndex(context)
-        val entry = entries.firstOrNull { it.id == defaultId } ?: entries.first()
-        val resolved = resolve(context, entry)
-        return resolved.copy(memoryMap = resolved.memoryMap.copy(matchesLoadedRom = false))
+    fun forCrc32(context: Context, crc32: Long): MemoryMap? =
+        all(context).firstOrNull { crc32 in it.crc32s }
+
+    /**
+     * What to use until a ROM is identified. Flagged [MemoryMap.matchesLoadedRom]
+     * false: it is a guess so the hub has something to show at launch, not a
+     * claim about which game is loaded.
+     */
+    fun default(context: Context): MemoryMap? {
+        val profiles = all(context)
+        val fallback = profiles.firstOrNull { it.isDefault } ?: profiles.firstOrNull()
+        return fallback?.copy(matchesLoadedRom = false)
     }
 
-    /** Looks up the profile whose crc32 list contains [crc32], or null if none match yet. */
-    fun forCrc32(context: Context, crc32: Long): ResolvedGameProfile? {
-        val (entries, _) = loadIndex(context)
-        val entry = entries.firstOrNull { crc32 in it.crc32s } ?: return null
-        return resolve(context, entry)
-    }
+    private fun loadBundled(context: Context): List<MemoryMap> =
+        runCatching { context.assets.list(DIR)?.toList() ?: emptyList() }
+            .getOrDefault(emptyList())
+            .filter { it.endsWith(SUFFIX) }
+            .mapNotNull { name ->
+                parseOrWarn(name) {
+                    context.assets.open("$DIR/$name").bufferedReader().use { it.readText() }
+                }
+            }
+
+    private fun loadExternal(context: Context): List<MemoryMap> =
+        externalDir(context)
+            ?.let { dir -> runCatching { dir.listFiles() }.getOrNull() }
+            ?.filter { it.isFile && it.name.endsWith(SUFFIX) }
+            ?.mapNotNull { file -> parseOrWarn(file.name) { file.readText() } }
+            ?: emptyList()
+
+    /**
+     * One malformed profile must not take the app down with it -- most likely
+     * it is a drop-in someone is still writing, and the other games should
+     * keep working while they fix it.
+     */
+    private inline fun parseOrWarn(fileName: String, readJson: () -> String): MemoryMap? =
+        runCatching { MemoryMap.parse(readJson(), fileName.removeSuffix(SUFFIX)) }
+            .onFailure { Log.w(TAG, "Skipping unreadable profile '$fileName'", it) }
+            .getOrNull()
+
+    private const val SUFFIX = ".json"
 }
