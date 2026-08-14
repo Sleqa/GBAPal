@@ -34,11 +34,8 @@ single-screen app too — run it on a phone next to your emulator.
 - **Tap-to-describe Pokedex** — tap a Pokemon's name, ability, held item, or
   any move for what it actually does, including how that Pokemon evolves.
   Looked up once, cached on the device, works offline after that.
-- **Quick actions** — a heal button (full HP and PP, blocked mid-battle so
-  it can't be used as a move) and an infinite Repel toggle, both optional
+- **Quick actions** — a heal button (full HP and PP, blocked mid-battle. Intended to function like the PokeVial from other ROM Hacks for Hacks that dont support it) and an infinite Repel toggle, both optional
   from Settings.
-- Pure black-and-white, OLED-friendly theme. The only colour on screen is
-  Pokemon type colour.
 
 ## Supported games
 
@@ -90,12 +87,12 @@ with your own.
 Add this repo to [Obtainium](https://github.com/ImranR98/Obtainium) as a
 GitHub source to track and auto-update from [Releases](../../releases).
 
-## About the AI in this
+## AI Usage
 
-I built this with a lot of help from AI — I don't have real software
+I built this with a lot of help from AI, I don't have real software
 development experience, and this app wouldn't exist without it. I wanted
 something like this for my own Pokemon ROM hack playthroughs, and once it
 was working, it seemed worth sharing rather than keeping to myself. If
-nobody else ever uses it, that's fine — I built it for me first, and I'll
+nobody else ever uses it, that's fine, I built it for me first, and I'll
 keep using and improving it either way. I'd just rather be upfront about how
 it was made than pretend otherwise.
