@@ -20,6 +20,8 @@ data class PartySlot(
     val speed: Int,
     val spAttack: Int,
     val spDefense: Int,
+    /** Raw Gen 3 status1 bitfield; decode with [StatusCondition.from]. */
+    val status: Long,
 ) {
     /** True if this looks like a real occupied slot (vs empty/garbage memory). */
     val looksValid: Boolean
@@ -64,6 +66,7 @@ object PartyDecoder {
             speed = bytes.u16(OFF_SPEED),
             spAttack = bytes.u16(OFF_SP_ATTACK),
             spDefense = bytes.u16(OFF_SP_DEFENSE),
+            status = bytes.u32(OFF_STATUS),
         )
     }
 

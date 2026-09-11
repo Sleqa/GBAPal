@@ -38,9 +38,14 @@ import com.gbapal.companion.network.DexKind
 import com.gbapal.companion.network.DexResult
 import com.gbapal.companion.network.PokeApiClient
 import com.gbapal.companion.network.RetroArchClient
+import com.gbapal.companion.pokemon.BattleStat
+import com.gbapal.companion.pokemon.BattleStats
 import com.gbapal.companion.pokemon.GameData
+import com.gbapal.companion.pokemon.StatusCondition
 import com.gbapal.companion.pokemon.SpriteAssets
+import com.gbapal.companion.pokemon.SwapAdvisor
 import com.gbapal.companion.ui.hub.HubMon
+import com.gbapal.companion.ui.theme.FaintedSpriteFilter
 import com.gbapal.companion.ui.theme.MonoAccent
 import com.gbapal.companion.ui.theme.MonoBg
 import com.gbapal.companion.ui.theme.MonoLabel
@@ -68,6 +73,16 @@ fun PokemonDetailScreen(
      */
     compareAgainst: HubMon? = null,
     /**
+     * Whoever this Pokemon is currently facing, used only to work out which of
+     * its moves are super effective.
+     *
+     * Deliberately separate from [compareAgainst]: that one is switched off for
+     * the player's own Pokemon and by the stat-compare setting, whereas knowing
+     * which of your moves hit hard is useful on both sides of the field and
+     * regardless of whether the stat numbers are being coloured.
+     */
+    facing: HubMon? = null,
+    /**
      * Live battle stat stages for [mon] -- ATK, DEF, SPD, SP.ATK, SP.DEF, in
      * that order, each -6..+6 relative to neutral -- when [mon] is the one
      * actually out on the field mid-battle. Null (the default, and what the
@@ -75,6 +90,19 @@ fun PokemonDetailScreen(
      * no stage badge.
      */
     statStages: List<Int>? = null,
+    /**
+     * Whether tapping a name looks its description up on PokeAPI. Off makes
+     * those names inert -- this is the only part of the app that touches the
+     * network, so the setting is the difference between an entirely local tool
+     * and one that talks to a server.
+     */
+    dexLookupEnabled: Boolean = true,
+    /**
+     * Ranked switch-ins against [mon], or empty to hide the advisor entirely.
+     * Computed by the caller, which is the only place that knows your whole
+     * party -- this screen only ever sees one Pokemon.
+     */
+    swapCandidates: List<SwapAdvisor.Candidate> = emptyList(),
 ) {
     var sprite by remember(mon.speciesId, map) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(mon.speciesId, map) {
@@ -111,6 +139,7 @@ fun PokemonDetailScreen(
     val (weaknesses, resists) = remember(baseEntry?.type1, baseEntry?.type2) {
         weaknessesAndResists(baseEntry?.type1, baseEntry?.type2)
     }
+    val facingEntry = facing?.let { gameData.entry(it.speciesId) }
 
     Box(
         modifier = Modifier
@@ -178,7 +207,7 @@ fun PokemonDetailScreen(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = { dexQuery = DexQuery(DexKind.SPECIES, speciesName) },
+                                onClick = { if (dexLookupEnabled) dexQuery = DexQuery(DexKind.SPECIES, speciesName) },
                             )
                             .padding(vertical = 4.dp),
                     )
@@ -187,7 +216,14 @@ fun PokemonDetailScreen(
                         TypeBadge(type)
                     }
                 }
-                CloseButton(onClose)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SwapAdvisorButton(
+                        candidates = swapCandidates,
+                        opponentName = displayName,
+                        gameData = gameData,
+                    )
+                    CloseButton(onClose)
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -199,6 +235,7 @@ fun PokemonDetailScreen(
                         bitmap = currentSprite,
                         contentDescription = null,
                         filterQuality = FilterQuality.None,
+                        colorFilter = if (mon.currentHp == 0) FaintedSpriteFilter else null,
                         modifier = Modifier.size(88.dp),
                     )
                 } else {
@@ -210,7 +247,13 @@ fun PokemonDetailScreen(
                 Spacer(modifier = Modifier.width(14.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    MonoLabel("Lv ${mon.level}", color = MonoText, fontSize = 14.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        MonoLabel("Lv ${mon.level}", color = MonoText, fontSize = 14.sp)
+                        mon.status?.let {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            StatusBadge(it)
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val itemName = gameData.itemName(mon.heldItemId)
@@ -221,7 +264,7 @@ fun PokemonDetailScreen(
                             // look up -- leave it inert rather than firing a
                             // request that can only 404.
                             enabled = mon.heldItemId != 0,
-                            onClick = { dexQuery = DexQuery(DexKind.ITEM, itemName) },
+                            onClick = { if (dexLookupEnabled) dexQuery = DexQuery(DexKind.ITEM, itemName) },
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         val abilityName = gameData.abilityName(mon.abilityId)
@@ -229,7 +272,7 @@ fun PokemonDetailScreen(
                             label = "Ability",
                             value = abilityName,
                             enabled = abilityName.isNotBlank(),
-                            onClick = { dexQuery = DexQuery(DexKind.ABILITY, abilityName) },
+                            onClick = { if (dexLookupEnabled) dexQuery = DexQuery(DexKind.ABILITY, abilityName) },
                         )
                     }
                     Spacer(modifier = Modifier.height(6.dp))
@@ -257,12 +300,16 @@ fun PokemonDetailScreen(
                 NavArrowButton(direction = NavDirection.PREVIOUS, onClick = onPrevious)
                 StatsRow(
                     modifier = Modifier.weight(1f),
+                    status = mon.status,
+                    abilityName = gameData.abilityName(mon.abilityId),
+                    opposingStatus = compareAgainst?.status,
+                    opposingAbility = compareAgainst?.let { gameData.abilityName(it.abilityId) },
                     stats = listOf(
-                        StatEntry("ATK", mon.attack, compareAgainst?.attack, statStages?.getOrNull(0)),
-                        StatEntry("DEF", mon.defense, compareAgainst?.defense, statStages?.getOrNull(1)),
-                        StatEntry("SPD", mon.speed, compareAgainst?.speed, statStages?.getOrNull(2)),
-                        StatEntry("SP.ATK", mon.spAttack, compareAgainst?.spAttack, statStages?.getOrNull(3)),
-                        StatEntry("SP.DEF", mon.spDefense, compareAgainst?.spDefense, statStages?.getOrNull(4)),
+                        StatEntry("ATK", BattleStat.ATTACK, mon.attack, compareAgainst?.attack, statStages?.getOrNull(0)),
+                        StatEntry("DEF", BattleStat.DEFENSE, mon.defense, compareAgainst?.defense, statStages?.getOrNull(1)),
+                        StatEntry("SPD", BattleStat.SPEED, mon.speed, compareAgainst?.speed, statStages?.getOrNull(2)),
+                        StatEntry("SP.ATK", BattleStat.SP_ATTACK, mon.spAttack, compareAgainst?.spAttack, statStages?.getOrNull(3)),
+                        StatEntry("SP.DEF", BattleStat.SP_DEFENSE, mon.spDefense, compareAgainst?.spDefense, statStages?.getOrNull(4)),
                     ),
                 )
                 NavArrowButton(direction = NavDirection.NEXT, onClick = onNext)
@@ -289,8 +336,11 @@ fun PokemonDetailScreen(
                                 accuracy = gameData.moveAccuracy(moveId),
                                 pp = pp,
                                 ppMax = gameData.ppMax(moveId),
-                                onClick = { dexQuery = DexQuery(DexKind.MOVE, moveName) },
+                                onClick = { if (dexLookupEnabled) dexQuery = DexQuery(DexKind.MOVE, moveName) },
                                 modifier = Modifier.weight(1f),
+                                effectiveness = facingEntry?.let {
+                                    effectivenessAgainst(it.type1, it.type2, gameData.moveType(moveId))
+                                },
                             )
                         } else {
                             Spacer(modifier = Modifier.weight(1f))
@@ -331,7 +381,13 @@ fun PokemonDetailScreen(
  * ([stage] null or 0 shows no badge -- 0 is neutral, so it would be a no-op
  * label anyway).
  */
-private data class StatEntry(val label: String, val value: Int, val opposing: Int?, val stage: Int? = null)
+private data class StatEntry(
+    val label: String,
+    val stat: BattleStat,
+    val value: Int,
+    val opposing: Int?,
+    val stage: Int? = null,
+)
 
 /**
  * Red where this Pokemon's stat beats the opposing one, green where it loses,
@@ -341,7 +397,7 @@ private data class StatEntry(val label: String, val value: Int, val opposing: In
  * is only ever shown on an opponent's card: a stat the opponent wins is a
  * threat (red), one they lose is an opening (green).
  */
-private fun statCompareColor(value: Int, opposing: Int?): Color = when {
+internal fun statCompareColor(value: Int, opposing: Int?): Color = when {
     opposing == null || value == opposing -> MonoText
     value > opposing -> StatWorse
     else -> StatBetter
@@ -350,21 +406,16 @@ private fun statCompareColor(value: Int, opposing: Int?): Color = when {
 private val StatBetter = Color(0xFF4ADE68)
 private val StatWorse = Color(0xFFF87171)
 
-/**
- * Applies a battle stat-stage multiplier to a base stat value, matching the
- * game's own formula: (2+stage)/2 for a boost, 2/(2-stage) for a drop -- e.g.
- * +1 is 1.5x (a 50% increase), +2 is 2x, -1 is 2/3, -2 is 0.5x. Null or 0
- * (neutral) returns [base] unchanged.
- */
-private fun applyStatStage(base: Int, stage: Int?): Int {
-    if (stage == null || stage == 0) return base
-    val multiplier = if (stage > 0) (2f + stage) / 2f else 2f / (2f - stage)
-    return Math.round(base * multiplier)
-}
-
 /** All stats spread evenly across the full width, each as a compact label/value pair. */
 @Composable
-private fun StatsRow(stats: List<StatEntry>, modifier: Modifier = Modifier) {
+private fun StatsRow(
+    stats: List<StatEntry>,
+    status: StatusCondition?,
+    abilityName: String?,
+    opposingStatus: StatusCondition?,
+    opposingAbility: String?,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -373,14 +424,16 @@ private fun StatsRow(stats: List<StatEntry>, modifier: Modifier = Modifier) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 MonoLabel(entry.label, color = MonoTextMuted, fontSize = 11.sp)
                 Spacer(modifier = Modifier.height(2.dp))
-                // Compares the stage-adjusted value, not the raw base stat --
-                // otherwise a -1 that drops this stat below the opponent's (or
-                // a +1 that pushes it above) leaves the colour stuck on
-                // whatever it was before the stage applied.
-                val adjusted = applyStatStage(entry.value, entry.stage)
+                // Both sides are resolved through stages *and* status before
+                // being compared, so a burn or paralysis moves the colour the
+                // same way it moves the actual matchup.
+                val adjusted = BattleStats.effective(entry.value, entry.stage, entry.stat, status, abilityName)
+                val opposing = entry.opposing?.let {
+                    BattleStats.effective(it, null, entry.stat, opposingStatus, opposingAbility)
+                }
                 MonoLabel(
                     adjusted.toString(),
-                    color = statCompareColor(adjusted, entry.opposing),
+                    color = statCompareColor(adjusted, opposing),
                     fontSize = 15.sp,
                 )
                 val stage = entry.stage

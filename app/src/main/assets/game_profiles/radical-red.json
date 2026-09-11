@@ -122,6 +122,20 @@
       "size": 1,
       "confidence": "radical-red-verified",
       "note": "Confirmed live 2026-08-09: read 0x07 before entering a wild battle and 0x08 once in it, the only clean +1 change in an 8KB before/after diff of the whole surrounding region (0x02025000-0x02027000, 4 other bytes moved but not in a battle-start shape -- e.g. +3 on two of them, consistent with a handful of overworld steps taken to reach the encounter, not battle state). Same address and semantics as Unbound's own totalBattleCounter -- this is what HubScreen polls to detect a battle starting when a profile has no cleaner battleActiveFlag."
+    },
+    {
+      "name": "battleTypeFlags",
+      "address": "0x02022B4C",
+      "size": 1,
+      "confidence": "candidate",
+      "note": "gBattleTypeFlags (u32) -- only the low byte is read, because the one bit this app needs, BATTLE_TYPE_DOUBLE, is 0x0001. Confirmed live 2026-08-15 on Unbound (not yet on Radical Red): read 0x00 in the overworld and 0x0D in a double trainer battle (DOUBLE|IS_MASTER|TRAINER, matching CFRU's include/constants/battle.h). Preferred over gBattlersCount for detecting a double, since it stays set even once battlers have fainted and the count drops. Carried over from unbound.json: both are CFRU builds and every other standard CFRU battle address (party/enemyParty/gBattleMons) matched exactly between them, but this one has not been read on Radical Red yet."
+    },
+    {
+      "name": "battlerPartyIndexes",
+      "address": "0x02023BCE",
+      "size": 8,
+      "confidence": "candidate",
+      "note": "gBattlerPartyIndexes: u16 per battler, saying which party slot each of the four battle slots was sent out from. Confirmed live 2026-08-15 in a double battle: read 0,0,1,1 -- i.e. both sides had their party slot 0 out on the left and slot 1 on the right, matching the actual battle. Used to map an active battler onto its fully-decoded entry in party/enemyParty, which is more reliable than matching on species (a team can hold two of the same species). Carried over from unbound.json: both are CFRU builds and every other standard CFRU battle address (party/enemyParty/gBattleMons) matched exactly between them, but this one has not been read on Radical Red yet."
     }
   ],
   "version": "4.1"

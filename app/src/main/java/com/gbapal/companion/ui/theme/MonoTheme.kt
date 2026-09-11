@@ -4,7 +4,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +29,17 @@ val MonoAccent = Color(0xFFFFFFFF)
 
 val MonoFont = FontFamily(Font(R.font.upheaval, FontWeight.Normal))
 
+/**
+ * Drains the colour out of a fainted Pokemon's sprite.
+ *
+ * Saturation only -- brightness is left alone, so the sprite stays as readable
+ * as it was and reads as "out of the fight" rather than as a loading or
+ * disabled state. Sits well with a theme that is otherwise black and white
+ * anyway: a fainted Pokemon simply stops being the one thing on screen allowed
+ * to have colour.
+ */
+val FaintedSpriteFilter: ColorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+
 @Composable
 fun MonoLabel(
     text: String,
@@ -33,11 +47,13 @@ fun MonoLabel(
     color: Color = MonoText,
     fontSize: TextUnit = 13.sp,
     fontWeight: FontWeight = FontWeight.Normal,
+    textAlign: TextAlign? = null,
 ) {
     Text(
         text = text,
         modifier = modifier,
         color = color,
+        textAlign = textAlign,
         style = TextStyle(
             fontFamily = MonoFont,
             fontWeight = fontWeight,
