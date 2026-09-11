@@ -60,10 +60,10 @@
   "activeBattlers": {
     "name": "gBattleMons",
     "slotStride": 96,
-    "slotCount": 2,
+    "slotCount": 4,
     "firstSlotAddress": "0x02000360",
     "confidence": "emerald-imperium-verified",
-    "note": "NOT the same address as the CFRU games (Unbound/Radical Red use 0x02023BE4, stride 88) -- this is a pokeemerald-expansion build with a genuinely different, larger BattlePokemon struct (96 bytes, 8 more than CFRU's). Confirmed live 2026-08-09 by searching all of WRAM for the exact species id of both the live wild opponent (Sewaddle, species 540) and the player's own active Pokemon (Sprigatito, species 1289) mid-battle: found index 0 at 0x02000360 with species/stats/all 4 moves matching Sprigatito exactly ([10, 39, 633, 44]), and index 1 exactly one stride (0x60) later at 0x020003C0 with species/moves matching the wild Sewaddle exactly ([33, 81, 0, 0]). The early species/stats/moves field layout matches CFRU's struct shape closely (species u16, then 5x u16 stats, then 4x u16 moves at offset 12), diverging only in overall size -- consistent with this engine's fields being wider further into the struct (matches speciesStats.fields below widening ability1/ability2/hiddenAbility to u16 for the same reason)."
+    "note": "NOT the same address as the CFRU games (Unbound/Radical Red use 0x02023BE4, stride 88) -- this is a pokeemerald-expansion build with a genuinely different, larger BattlePokemon struct (96 bytes, 8 more than CFRU's). Confirmed live 2026-08-09 by searching all of WRAM for the exact species id of both the live wild opponent (Sewaddle, species 540) and the player's own active Pokemon (Sprigatito, species 1289) mid-battle: found index 0 at 0x02000360 with species/stats/all 4 moves matching Sprigatito exactly ([10, 39, 633, 44]), and index 1 exactly one stride (0x60) later at 0x020003C0 with species/moves matching the wild Sewaddle exactly ([33, 81, 0, 0]). The early species/stats/moves field layout matches CFRU's struct shape closely (species u16, then 5x u16 stats, then 4x u16 moves at offset 12), diverging only in overall size -- consistent with this engine's fields being wider further into the struct (matches speciesStats.fields below widening ability1/ability2/hiddenAbility to u16 for the same reason). slotCount raised to 4 on 2026-08-21: the array has always held all four battle slots (MAX_BATTLERS_COUNT), and a double battle uses every one of them -- indices 0/2 are the player's side, 1/3 the opponent's."
   },
   "scriptVars": {
     "name": "gSpecialVars (0x8000-0x800F)",
@@ -203,6 +203,27 @@
       "size": 1,
       "confidence": "emerald-imperium-verified",
       "note": "Back to the original address after a detour: a live 2026-08-10 poll at 50ms resolution found this flag genuinely spends much of a battle at 0 -- sometimes for 8-10+ continuous seconds -- and only briefly touches 1, looking more like an 'awaiting player input' signal than 'in battle' (the original 2026-07-30 confirmation only sampled coarsely enough to miss this). A replacement address (0x0200050C) was tried and turned out no better -- also fluctuated once watched across a full battle's actual turns. Every candidate byte found this way through several rounds of diffing had the same problem, which pointed at the real issue being architectural, not a wrong address: no single flag byte in this ROM cleanly means 'currently in battle' for the flag's whole duration. The fix implemented in HubScreen.kt: this flag is now used only to detect a battle *starting* (any 0->nonzero transition, which has always worked reliably, including through every test above) -- it no longer has any say in ending one. Battle end is now detected the same way the CFRU games already do it: overworldObjects position changing after the battle-start trigger (see that key's note for how the address was confirmed)."
+    },
+    {
+      "name": "battleTypeFlags",
+      "address": "0x020002C0",
+      "size": 1,
+      "confidence": "emerald-imperium-verified",
+      "note": "gBattleTypeFlags (u32); only the low byte is read, since BATTLE_TYPE_DOUBLE is 0x0001. Found live 2026-08-21 by diffing full-WRAM snapshots taken in the overworld and in a double trainer battle, keeping only word-aligned u32s whose bits all fall inside pokeemerald's defined battle-type range. Read 0x0D (DOUBLE|IS_MASTER|TRAINER) in the double battle and 0x0C in the overworld -- i.e. exactly the DOUBLE bit toggling while the other two persist, which is how this word behaves (it is not cleared when a battle ends). That neighbouring-bit coherence is what picked it out; over a hundred other addresses also had bit 0 set. Sits 0xA0 before gBattleMons, inside the same battle data block, which is corroborating. TWO_OPPONENTS (0x8000) rides alongside DOUBLE (0x0001) when two trainers each send out one Pokemon, so testing the DOUBLE bit alone covers both kinds of double battle. Confirmed 2026-08-22 reading 0x800D in exactly that fight. Note the whole word persists after a battle ends -- 0x800D still reads in the overworld -- so it says what kind of battle this is, never whether one is happening; battleActiveFlag does that."
+    },
+    {
+      "name": "battlerPartyIndexes",
+      "address": "0x02000348",
+      "size": 8,
+      "confidence": "emerald-imperium-verified",
+      "note": "gBattlerPartyIndexes: u16 per battle slot, naming which party slot each was sent out from. Confirmed live 2026-08-21 in a double battle: read [0,0,1,1], the same shape Unbound gives -- both sides with party slot 0 on the left and slot 1 on the right. Its neighbours corroborate the whole block: gBattlersCount at 0x02000344 read 4 (2 in a single battle) and gBattlerPositions at 0x02000350 read [0,1,2,3]. Layout matches CFRU's ordering (count, then indexes, then positions), which is why it was found by looking just before gBattleMons rather than by scanning. Re-checked 2026-08-22 in a two-trainer double battle (gBattleTypeFlags 0x800D, i.e. DOUBLE|IS_MASTER|TRAINER|TWO_OPPONENTS): read [0,0,1,3] with gEnemyParty holding Dedenne in slot 0 and Maractus in slot 3 and nothing in between. So the two trainers split the one enemy party -- the first gets slots 0-2, the second 3-5 -- and these indexes stay absolute into it rather than restarting per trainer. That gap is what broke the doubles screen before HubMon carried its real partySlot."
+    },
+    {
+      "name": "battleInProgress",
+      "address": "0x02037850",
+      "size": 4,
+      "confidence": "emerald-imperium-verified",
+      "note": "gEnemyParty[0].personality, read purely as a boolean: nonzero exactly while a battle is running. This is what ends a battle for this profile, replacing the old scheme of waiting for the player to take a step in the overworld -- that only noticed the battle was over once the player moved, so the battle view could sit there indefinitely if they stood still. Found 2026-08-23 by polling every candidate signal at 200ms across a whole battle and comparing the middle, not just the edges, which is where the previous attempts went wrong. battleActiveFlag read 0 for most of the battle, blipping to 2 and 3 only while awaiting input; gBattlersCount stayed 4 throughout and kept reading 4 afterwards. This word was 0 in the overworld, became nonzero the instant the battle began (a fraction before gBattleMons filled in), held steady through 39 seconds and many turns, and returned to 0 at the exact moment the battle ended. gBattleMons[0].species at 0x02000360 flips identically and would serve equally well at both edges; the enemy party is preferred because it cannot be disturbed mid-battle -- a fainting or switching Pokemon rewrites gBattleMons but never clears the party a battle was loaded from. Read as a 4-byte value rather than one byte because a personality is a u32 and any of its bytes can legitimately be zero."
     }
   ],
   "dataTables": {

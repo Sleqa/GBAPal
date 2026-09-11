@@ -43,10 +43,50 @@ object Gen3Decrypt {
      */
     internal const val OFF_PP = 0x34
 
+    /**
+     * pokeemerald-expansion declares Growth's species field as `u16 species:11`
+     * and packs a second 5-bit field into the top of the same halfword -- a
+     * nature override, 0 meaning "no override, use the one the personality
+     * implies". Confirmed live in Emerald Imperium on 2026-08-22: three mons
+     * whose nature had been changed read 27913, 6965 and 26895 where the plain
+     * species is 1289 (Sprigatito), 821 (Rookidee) and 271 (Lombre), while two
+     * untouched mons read their species with the top bits clear -- and those
+     * two mons' stat spreads match their personality's nature, which is what
+     * proves 0 means "unset" rather than Hardy.
+     *
+     * Masking matters far more than just getting the name right, because
+     * [detectFormat] rejects an implausible species: left unmasked, one changed
+     * nature made a correctly-encrypted mon look like a failed decrypt, and the
+     * whole slot fell back to reading ciphertext as plaintext.
+     *
+     * Only applied to [PartyFormat.ENCRYPTED]. Vanilla Gen 3 tops out around
+     * species 411 and expansion at 2047, so the mask never truncates a real id
+     * there; CFRU's plaintext structs keep a full u16 and are left alone.
+     */
+    private const val SPECIES_MASK = 0x7FF
+
     // Offsets of each substructure once the block is in canonical G/A/E/M order.
     private const val GROWTH = 0
     private const val ATTACKS = 12
     private const val MISC = 36
+
+    /**
+     * Where pokeemerald-expansion keeps `abilityNum`: two bits at bit 29 of the
+     * word at Misc+8, which vanilla Gen 3 used entirely for ribbons and
+     * fatefulEncounter. 0 and 1 are the species' two normal slots, 2 its hidden
+     * one.
+     *
+     * Vanilla Gen 3 instead stored a single ability bit at bit 31 of the IV
+     * word, which is what this used to read -- wrong for every expansion ROM,
+     * and the reason a Lombre with Rain Dish showed up as Swift Swim. Pinned
+     * live on 2026-08-22 against exactly that Lombre: it was the only party
+     * member with anything set here, reading 0x20000000, and bit 29 is the only
+     * offset that turns that into its true slot (bit 28 would say Own Tempo).
+     * Every supported ENCRYPTED profile is an expansion build, not true vanilla.
+     */
+    private const val ABILITY_NUM_WORD = MISC + 8
+    private const val ABILITY_NUM_SHIFT = 29
+    private const val ABILITY_NUM_MASK = 0x3L
 
     /**
      * The 24 substructure permutations, indexed by personality % 24. Each entry
@@ -79,11 +119,11 @@ object Gen3Decrypt {
         val pp: IntArray,
         val hiddenAbilityFlag: Boolean,
         /**
-         * Which of the species' two normal ability slots this Pokemon uses, or
-         * null when the format does not record it. Vanilla Gen 3 stores this in
-         * bit 31 of the Misc IV word; prefer it over deriving the slot from
-         * personality parity, since breeding and abilities set by other means
-         * can leave the two disagreeing.
+         * Which ability slot this Pokemon actually uses -- 0 or 1 for the two
+         * normal ones, 2 for its hidden one -- or null when the format does not
+         * record it. See [ABILITY_NUM_WORD] for where it lives. Prefer it over
+         * deriving the slot from personality parity, since breeding, ability
+         * capsules and hidden abilities all leave the two disagreeing.
          */
         val abilityNum: Int?,
         val format: PartyFormat,
@@ -175,8 +215,8 @@ object Gen3Decrypt {
     fun detectFormat(struct: ByteArray): PartyFormat {
         val canonical = decryptCanonical(struct) ?: return PartyFormat.PLAINTEXT
         if (checksumOf(canonical) != struct.u16(OFF_CHECKSUM)) return PartyFormat.PLAINTEXT
-        val species = canonical.u16(GROWTH)
-        if (species == 0 || species > 4000) return PartyFormat.PLAINTEXT
+        val species = canonical.u16(GROWTH) and SPECIES_MASK
+        if (species == 0) return PartyFormat.PLAINTEXT
         for (i in 0 until 4) {
             if (canonical.u16(ATTACKS + i * 2) > 4000) return PartyFormat.PLAINTEXT
         }
@@ -214,14 +254,21 @@ object Gen3Decrypt {
         return Decoded(
             nickname = Gen3Text.decode(struct.copyOfRange(0x08, 0x08 + 10)),
             otName = Gen3Text.decode(struct.copyOfRange(0x14, 0x14 + 7)),
-            speciesId = block.u16(GROWTH),
+            speciesId = when (resolved) {
+                PartyFormat.ENCRYPTED -> block.u16(GROWTH) and SPECIES_MASK
+                PartyFormat.PLAINTEXT -> block.u16(GROWTH)
+            },
             heldItemId = block.u16(GROWTH + 2),
             experience = block.u32(GROWTH + 4),
             friendship = block[GROWTH + 9].toInt() and 0xFF,
             moves = IntArray(4) { block.u16(ATTACKS + it * 2) },
             pp = IntArray(4) { block[ATTACKS + 8 + it].toInt() and 0xFF },
             hiddenAbilityFlag = resolved == PartyFormat.PLAINTEXT && bit31,
-            abilityNum = if (resolved == PartyFormat.ENCRYPTED) (if (bit31) 1 else 0) else null,
+            abilityNum = if (resolved == PartyFormat.ENCRYPTED) {
+                ((block.u32(ABILITY_NUM_WORD) shr ABILITY_NUM_SHIFT) and ABILITY_NUM_MASK).toInt()
+            } else {
+                null
+            },
             format = resolved,
         )
     }

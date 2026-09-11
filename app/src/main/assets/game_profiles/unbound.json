@@ -414,6 +414,20 @@
       "confidence": "unbound-verified",
       "kind": "text",
       "note": "gStringVar4 per CFRU (address matches; size still a guess since CFRU's #define doesn't state a length). Same location-banner test as stringBuffer0."
+    },
+    {
+      "name": "battleTypeFlags",
+      "address": "0x02022B4C",
+      "size": 1,
+      "confidence": "unbound-verified",
+      "note": "gBattleTypeFlags (u32) -- only the low byte is read, because the one bit this app needs, BATTLE_TYPE_DOUBLE, is 0x0001. Confirmed live 2026-08-15 on Unbound: read 0x00 in the overworld and 0x0D in a double trainer battle (DOUBLE|IS_MASTER|TRAINER, matching CFRU's include/constants/battle.h). Preferred over gBattlersCount for detecting a double, since it stays set even once battlers have fainted and the count drops."
+    },
+    {
+      "name": "battlerPartyIndexes",
+      "address": "0x02023BCE",
+      "size": 8,
+      "confidence": "unbound-verified",
+      "note": "gBattlerPartyIndexes: u16 per battler, saying which party slot each of the four battle slots was sent out from. Confirmed live 2026-08-15 in a double battle: read 0,0,1,1 -- i.e. both sides had their party slot 0 out on the left and slot 1 on the right, matching the actual battle. Used to map an active battler onto its fully-decoded entry in party/enemyParty, which is more reliable than matching on species (a team can hold two of the same species)."
     }
   ],
   "dataTables": {

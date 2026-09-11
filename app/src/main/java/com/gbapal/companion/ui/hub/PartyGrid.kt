@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,9 +26,29 @@ import androidx.compose.ui.unit.sp
 import com.gbapal.companion.memory.MemoryMap
 import com.gbapal.companion.network.RetroArchClient
 import com.gbapal.companion.pokemon.SpriteAssets
+import com.gbapal.companion.ui.detail.StatusBadge
+import com.gbapal.companion.ui.theme.FaintedSpriteFilter
 import com.gbapal.companion.ui.theme.MonoLabel
 import com.gbapal.companion.ui.theme.MonoText
 import com.gbapal.companion.ui.theme.MonoTextMuted
+
+/*
+ * The band the party grid occupies, shared by the hub and the opponent screen
+ * so the six Pokemon land in identical screen positions on both.
+ *
+ * Fixed heights rather than each screen's own intrinsic ones, because the two
+ * headers hold different things -- a battery and a wrench on the hub, a CLOSE
+ * label and the save-team controls on the opponent screen -- and letting them
+ * size themselves is what made the grids disagree. Anything taller than the bar
+ * (the save/discard stack) overflows into the gap the grid leaves above its
+ * first row rather than pushing the grid down.
+ */
+
+/** Fits the opponent screen's CLOSE label, the tallest thing either header holds. */
+internal val PARTY_GRID_TOP_BAR = 40.dp
+
+/** Fits the hub's OPPONENT button and the opponent screen's ACTIVE BATTLE one. */
+internal val PARTY_GRID_BOTTOM_BAR = 46.dp
 
 /**
  * Up to six Pokemon laid out as three centered rows of two: the middle row
@@ -81,6 +103,7 @@ internal fun MonEntry(mon: HubMon, client: RetroArchClient, map: MemoryMap, onCl
                 bitmap = currentSprite,
                 contentDescription = null,
                 filterQuality = FilterQuality.None,
+                colorFilter = if (mon.currentHp == 0) FaintedSpriteFilter else null,
                 modifier = Modifier.size(68.dp),
             )
         } else {
@@ -89,6 +112,12 @@ internal fun MonEntry(mon: HubMon, client: RetroArchClient, map: MemoryMap, onCl
             }
         }
         MonoLabel(mon.nickname.uppercase(), color = MonoText, fontSize = 15.sp)
-        MonoLabel("Lv${mon.level}", color = MonoTextMuted, fontSize = 13.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MonoLabel("Lv${mon.level}", color = MonoTextMuted, fontSize = 13.sp)
+            mon.status?.let {
+                Spacer(modifier = Modifier.width(6.dp))
+                StatusBadge(it)
+            }
+        }
     }
 }

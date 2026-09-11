@@ -51,6 +51,7 @@ import com.gbapal.companion.pokemon.NameTables
 import com.gbapal.companion.pokemon.PartyDecoder
 import com.gbapal.companion.pokemon.PartySlot
 import com.gbapal.companion.pokemon.RomDataReader
+import com.gbapal.companion.pokemon.StatusCondition
 import com.gbapal.companion.ui.detail.PokemonDetailScreen
 import com.gbapal.companion.ui.opponent.OpponentScreen
 import com.gbapal.companion.ui.settings.SettingsScreen
@@ -76,6 +77,22 @@ private const val PLAYER_MOVE_POLL_INTERVAL_MS = 1_000L
 // statStages: species (0x00) through statStages[6] (0x1F), inclusive.
 private const val BATTLE_MON_READ_SIZE = 0x20
 
+// BATTLE_TYPE_DOUBLE from CFRU's include/constants/battle.h. It is the lowest
+// bit of gBattleTypeFlags, which is why the battleTypeFlags anchor only needs
+// to read one byte of that u32.
+private const val BATTLE_TYPE_DOUBLE = 0x01
+
+/** MAX_BATTLERS_COUNT from CFRU's include/constants/battle.h. */
+private const val MAX_BATTLERS = 4
+
+/**
+ * How many consecutive "no battle" reads end a battle, for profiles with a
+ * battleInProgress anchor. Two rather than one: a dropped UDP reply or a read
+ * torn across a frame would otherwise close the battle view mid-fight, and the
+ * cost of being right is one extra poll interval of delay.
+ */
+private const val BATTLE_END_CONFIRM_READS = 2
+
 /**
  * Extracts the five battle stat stages this app displays -- ATK, DEF, SPD,
  * SP.ATK, SP.DEF, in that order -- from a gBattleMons[] struct read, as
@@ -92,6 +109,17 @@ private fun statStagesFromBattlerBytes(bytes: ByteArray): List<Int>? {
 }
 
 data class HubMon(
+    /**
+     * Which party slot this came out of, 0-5.
+     *
+     * Not the same as its position in the list: empty slots are dropped, so the
+     * two only agree when the party has no holes. A two-trainer double battle
+     * is exactly when it has one -- the enemy party puts the first trainer in
+     * slots 0-2 and the second in 3-5, leaving a gap whenever the first brought
+     * fewer than three. gBattlerPartyIndexes names real slots, so anything
+     * resolving a battler has to match on this rather than index the list.
+     */
+    val partySlot: Int,
     val speciesId: Int,
     val nickname: String,
     val level: Int,
@@ -106,6 +134,8 @@ data class HubMon(
     val abilityId: Int,
     val moves: List<Int>,
     val pp: List<Int>,
+    /** Major status condition, or null when healthy. */
+    val status: StatusCondition? = null,
 )
 
 /**
@@ -145,6 +175,14 @@ private suspend fun readAnchorByte(client: RetroArchClient, anchor: Anchor): Int
         ?.let { it.toInt() and 0xFF }
 }
 
+/** Reads all of [anchor]'s bytes, for the anchors that are a small array rather than one value. */
+private suspend fun readAnchorBytes(client: RetroArchClient, anchor: Anchor): ByteArray? {
+    val result = client.readCoreMemory(anchor.address, anchor.size)
+    return (result as? RetroArchClient.Result.Success)
+        ?.let { parseReadCoreMemoryResponse(it.response) }
+        ?.takeIf { it.size >= anchor.size }
+}
+
 internal suspend fun readPartyMons(
     client: RetroArchClient,
     layout: PartyLayout,
@@ -160,24 +198,25 @@ internal suspend fun readPartyMons(
     // Decode every slot first, then fetch the game data all of them need in one
     // pass, so the per-species/per-move ROM reads happen once rather than being
     // interleaved (and repeated) per slot.
-    val decoded = mutableListOf<Pair<PartySlot, Gen3Decrypt.Decoded>>()
+    val decoded = mutableListOf<Triple<Int, PartySlot, Gen3Decrypt.Decoded>>()
     for (slot in 0 until layout.slotCount) {
         val offset = slot * layout.slotStride
         val bytes = partyBytes.copyOfRange(offset, offset + layout.slotStride)
         val stats = PartyDecoder.decode(bytes) ?: continue
         if (!stats.looksValid) continue
         val fields = Gen3Decrypt.decode(bytes) ?: continue
-        decoded += stats to fields
+        decoded += Triple(slot, stats, fields)
     }
 
     gameData.prefetch(
-        speciesIds = decoded.map { it.second.speciesId },
-        moveIds = decoded.flatMap { it.second.moves.toList() },
-        itemIds = decoded.map { it.second.heldItemId },
+        speciesIds = decoded.map { it.third.speciesId },
+        moveIds = decoded.flatMap { it.third.moves.toList() },
+        itemIds = decoded.map { it.third.heldItemId },
     )
 
-    return decoded.map { (stats, fields) ->
+    return decoded.map { (slot, stats, fields) ->
         HubMon(
+            partySlot = slot,
             speciesId = fields.speciesId,
             nickname = fields.nickname,
             level = stats.level,
@@ -195,6 +234,7 @@ internal suspend fun readPartyMons(
             ),
             moves = fields.moves.toList(),
             pp = fields.pp.toList(),
+            status = StatusCondition.from(stats.status),
         )
     }
 }
@@ -275,6 +315,12 @@ fun HubScreen() {
     // unlike a counter that only signals a *change* or a coordinate that only
     // signals the player having taken a step.
     val battleActiveAnchor = remember(map) { map.anchors.firstOrNull { it.name == "battleActiveFlag" } }
+    val battleInProgressAnchor = remember(map) { map.anchors.firstOrNull { it.name == "battleInProgress" } }
+    // Doubles support, both optional: without them the app simply behaves as it
+    // always did and shows the single-battle view, which is the right fallback
+    // for a profile whose engine hasn't had these addresses found yet.
+    val battleTypeFlagsAnchor = remember(map) { map.anchors.firstOrNull { it.name == "battleTypeFlags" } }
+    val battlerPartyIndexesAnchor = remember(map) { map.anchors.firstOrNull { it.name == "battlerPartyIndexes" } }
 
     var party by remember { mutableStateOf<List<HubMon>>(emptyList()) }
     var lastBattleCounter by remember { mutableStateOf<Int?>(null) }
@@ -282,6 +328,10 @@ fun HubScreen() {
     var time by remember { mutableStateOf(clockText()) }
     var selectedSlot by remember { mutableStateOf<Int?>(null) }
     var showOpponentScreen by remember { mutableStateOf(false) }
+    // Whether the opponent screen should open on what's on the field or on the
+    // team. A battle starting means the fight; the hub's OPPONENT button means
+    // the team.
+    var openOpponentToBattle by remember { mutableStateOf(false) }
     // Which species is actually out on each side right now, for profiles
     // that describe activeBattlers (gBattleMons). Null whenever that isn't
     // known -- either the profile has no such table, or no battle is in
@@ -294,6 +344,14 @@ fun HubScreen() {
     // statStagesFromBattlerBytes for the struct layout this depends on.
     var activeOpponentStatStages by remember { mutableStateOf<List<Int>?>(null) }
     var activePlayerStatStages by remember { mutableStateOf<List<Int>?>(null) }
+    // Whether this is a double battle, and which party slot each of the four
+    // battle slots was sent out from (index 0/2 = player side, 1/3 = opponent).
+    // Both null when the profile can't answer, which keeps the single view.
+    var isDoubleBattle by remember { mutableStateOf(false) }
+    var battlerPartySlots by remember { mutableStateOf<List<Int>?>(null) }
+    // Stat stages for all four battle slots, so a double battle can show them
+    // for every Pokemon on the field rather than just the lead pair.
+    var battlerStatStages by remember { mutableStateOf<List<List<Int>?>?>(null) }
     // The real "are we in battle" state, separate from showOpponentScreen --
     // that flag is just overlay visibility, and tapping CLOSE on the opponent
     // screen must not be a way to fool the heal block into thinking the
@@ -304,6 +362,9 @@ fun HubScreen() {
     var showSettings by remember { mutableStateOf(false) }
     var qolModsEnabled by remember { mutableStateOf(true) }
     var statCompareEnabled by remember { mutableStateOf(true) }
+    // Defaults on: the lookup is the app's only network use, and it is opt-out
+    // rather than opt-in because it is a plainly useful part of the detail view.
+    var dexLookupEnabled by remember { mutableStateOf(true) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, _ ->
@@ -339,6 +400,7 @@ fun HubScreen() {
                     if (counterByte != null) {
                         if (previous != null && counterByte != previous) {
                             showOpponentScreen = true
+                            openOpponentToBattle = true
                             inBattle = true
                         }
                         lastBattleCounter = counterByte
@@ -358,21 +420,45 @@ fun HubScreen() {
 
     // Battle-end detection. Runs independently of whether the opponent overlay
     // is currently visible, since closing it manually mid-battle must not look
-    // like the battle ending. Once a battle starts, the first read here just
-    // calibrates the player's position as a baseline; any change after that
-    // means the player has taken a step post-battle, so the battle is over.
+    // like the battle ending.
     //
-    // This is the ONLY way a battle ends now, for every profile with an
-    // overworldObjects address -- including ones that also have a
-    // battleActiveAnchor. That anchor is only trusted for the *start* of a
-    // battle below; Emerald Imperium's turned out to have no reading that
-    // cleanly means "still in battle" for the anchor's whole duration (every
-    // candidate byte tried spent long stretches at its "not in battle" value
-    // mid-battle -- see that anchor's note), so real player movement is the
-    // more trustworthy signal to end on regardless of what a profile's flag is
-    // doing mid-battle.
+    // Two mechanisms, in preference order:
+    //
+    //  * battleInProgress, where the profile has one -- a value that is nonzero
+    //    for exactly as long as a battle is running. This ends the battle when
+    //    the battle actually ends.
+    //  * Otherwise, the player taking a step in the overworld. This is a proxy
+    //    rather than the real thing: it cannot notice the battle is over until
+    //    the player moves, so standing still afterwards leaves the battle view
+    //    up. It stays as the fallback because it needs no per-game discovery,
+    //    only an overworldObjects address, and every profile has one of those.
+    //
+    // A profile's battleActiveFlag is deliberately not used here either way --
+    // it is trusted only for the *start* of a battle, below. Emerald Imperium's
+    // spends most of a battle reading 0, blipping up only while the game waits
+    // for input, so ending on it would close the view mid-fight.
     LaunchedEffect(isStarted, inBattle, map) {
         if (!isStarted || !inBattle) return@LaunchedEffect
+
+        if (battleInProgressAnchor != null) {
+            // Only after two consecutive zero reads, so that a single dropped or
+            // torn read cannot end a battle that is still going.
+            var zeroReads = 0
+            while (isActive) {
+                val bytes = readAnchorBytes(client, battleInProgressAnchor)
+                if (bytes != null) {
+                    zeroReads = if (bytes.all { it.toInt() == 0 }) zeroReads + 1 else 0
+                    if (zeroReads >= BATTLE_END_CONFIRM_READS) {
+                        inBattle = false
+                        showOpponentScreen = false
+                        return@LaunchedEffect
+                    }
+                }
+                delay(PLAYER_MOVE_POLL_INTERVAL_MS)
+            }
+            return@LaunchedEffect
+        }
+
         // Skipped when the profile has no confirmed overworld address, rather
         // than reading a guessed one -- a wrong address yields arbitrary bytes,
         // which would look like the player constantly moving and end the battle
@@ -416,6 +502,7 @@ fun HubScreen() {
             if (value != null && value != 0 && !inBattle) {
                 inBattle = true
                 showOpponentScreen = true
+                openOpponentToBattle = true
             }
             delay(PLAYER_MOVE_POLL_INTERVAL_MS)
         }
@@ -447,6 +534,7 @@ fun HubScreen() {
             if (species != null && species != 0 && species != activeOpponentSpecies) {
                 activeOpponentSpecies = species
                 showOpponentScreen = true
+                openOpponentToBattle = true
             }
             activeOpponentStatStages = bytes?.let { statStagesFromBattlerBytes(it) }
             delay(PLAYER_MOVE_POLL_INTERVAL_MS)
@@ -474,6 +562,44 @@ fun HubScreen() {
                 activePlayerSpecies = species
             }
             activePlayerStatStages = bytes?.let { statStagesFromBattlerBytes(it) }
+            delay(PLAYER_MOVE_POLL_INTERVAL_MS)
+        }
+    }
+
+    // Single vs double, plus which party slot each battler came from.
+    //
+    // The DOUBLE bit is read rather than counting live battlers: the count
+    // drops as Pokemon faint, so a double battle down to its last mon would
+    // start looking like a single one and yank the player onto a different
+    // screen mid-fight, whereas this flag stays set for the whole battle.
+    LaunchedEffect(isStarted, inBattle, map) {
+        if (!isStarted || !inBattle || battleTypeFlagsAnchor == null) {
+            isDoubleBattle = false
+            battlerPartySlots = null
+            battlerStatStages = null
+            return@LaunchedEffect
+        }
+        val battlers = map.activeBattlers
+        while (isActive) {
+            readAnchorByte(client, battleTypeFlagsAnchor)?.let { flags ->
+                isDoubleBattle = (flags and BATTLE_TYPE_DOUBLE) != 0
+            }
+            battlerPartySlots = battlerPartyIndexesAnchor
+                ?.let { readAnchorBytes(client, it) }
+                ?.let { bytes -> List(bytes.size / 2) { i -> (bytes[i * 2].toInt() and 0xFF) or ((bytes[i * 2 + 1].toInt() and 0xFF) shl 8) } }
+
+            // All four battlers in one read rather than four, since they are
+            // contiguous -- the whole point of a stride.
+            battlerStatStages = battlers?.let { layout ->
+                val bytes = client.readCoreMemory(layout.firstSlotAddress, layout.slotStride * MAX_BATTLERS)
+                    .let { it as? RetroArchClient.Result.Success }
+                    ?.let { parseReadCoreMemoryResponse(it.response) }
+                bytes?.takeIf { it.size >= layout.slotStride * MAX_BATTLERS }?.let { all ->
+                    List(MAX_BATTLERS) { i ->
+                        statStagesFromBattlerBytes(all.copyOfRange(i * layout.slotStride, (i + 1) * layout.slotStride))
+                    }
+                }
+            }
             delay(PLAYER_MOVE_POLL_INTERVAL_MS)
         }
     }
@@ -518,7 +644,7 @@ fun HubScreen() {
             .padding(start = 14.dp, end = 14.dp, bottom = 14.dp, top = 6.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(PARTY_GRID_TOP_BAR),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -546,8 +672,9 @@ fun HubScreen() {
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            modifier = Modifier.fillMaxWidth().height(PARTY_GRID_BOTTOM_BAR),
             horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             MonoLabel(
                 text = "OPPONENT",
@@ -557,7 +684,10 @@ fun HubScreen() {
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = { showOpponentScreen = true },
+                        onClick = {
+                            openOpponentToBattle = false
+                            showOpponentScreen = true
+                        },
                     )
                     .padding(8.dp),
             )
@@ -612,6 +742,8 @@ fun HubScreen() {
             onQolModsChange = { qolModsEnabled = it },
             statCompareEnabled = statCompareEnabled,
             onStatCompareChange = { statCompareEnabled = it },
+            dexLookupEnabled = dexLookupEnabled,
+            onDexLookupChange = { dexLookupEnabled = it },
             onClose = { showSettings = false },
         )
     }
@@ -623,6 +755,7 @@ fun HubScreen() {
             gameData = gameData,
             client = client,
             map = map,
+            dexLookupEnabled = dexLookupEnabled,
             // Only the mon actually out on the field has meaningful stat
             // stages -- a benched party member is never mid-battle-affected.
             statStages = activePlayerStatStages?.takeIf { detailMon.speciesId == activePlayerSpecies },
@@ -647,7 +780,12 @@ fun HubScreen() {
             activeOpponentStatStages = activeOpponentStatStages,
             activePlayerStatStages = activePlayerStatStages,
             statCompareEnabled = statCompareEnabled,
+            dexLookupEnabled = dexLookupEnabled,
             inBattle = inBattle,
+            isDoubleBattle = isDoubleBattle,
+            battlerPartySlots = battlerPartySlots,
+            battlerStatStages = battlerStatStages,
+            openToActiveBattle = openOpponentToBattle,
             onClose = { showOpponentScreen = false },
         )
     }

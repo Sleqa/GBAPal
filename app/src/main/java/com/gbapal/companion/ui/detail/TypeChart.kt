@@ -100,6 +100,21 @@ private fun typeEffectiveness(defenderTypes: List<String>, attackerType: String)
     defenderTypes.fold(1f) { acc, defType -> acc * (TypeChart[defType]?.get(attackerType) ?: 1f) }
 
 /**
+ * What a move of [attackerType] is worth against a Pokemon of [type1]/[type2]:
+ * 4x, 2x, 1x, 0.5x, 0.25x or 0x.
+ *
+ * Returns 1x when the defender's types aren't known, so an unrecognised species
+ * reads as "nothing special" rather than lighting up every move on the card.
+ * Types outside the chart -- the profiles all carry a "Mystery" entry for Gen
+ * 3's ??? type -- fall through as neutral for the same reason.
+ */
+internal fun effectivenessAgainst(type1: String?, type2: String?, attackerType: String): Float {
+    val defender = listOfNotNull(type1, type2)
+    if (defender.isEmpty()) return 1f
+    return typeEffectiveness(defender, attackerType)
+}
+
+/**
  * Combines a (possibly dual-type) Pokemon's types into weakness/resist lists,
  * each paired with its actual multiplier (immunities count as resists, at
  * 0x). A dual-type Pokemon can be weak or resistant at more than one tier --
@@ -156,16 +171,22 @@ internal fun TypeBadge(type: String, multiplier: Float? = null, modifier: Modifi
 
 /** Wraps type badges into rows of 6 so long weakness/resist lists don't overflow the width. */
 @Composable
-internal fun TypeBadgeRow(types: List<Pair<String, Float>>) {
+internal fun TypeBadgeRow(types: List<Pair<String, Float>>, perRow: Int = 6, alignEnd: Boolean = false) {
     if (types.isEmpty()) {
         MonoLabel("NONE", color = MonoTextMuted, fontSize = 11.sp)
         return
     }
-    val rows = types.chunked(6)
+    // [perRow] and [alignEnd] are parameters because the doubles screen shows
+    // these in a half-width column -- six across would run off the edge, and
+    // its right-hand column is mirrored to hug the screen's right edge.
+    val rows = types.chunked(perRow)
     rows.forEachIndexed { rowIndex, rowTypes ->
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(
+                8.dp,
+                if (alignEnd) Alignment.End else Alignment.Start,
+            ),
         ) {
             rowTypes.forEach { (type, multiplier) -> TypeBadge(type, multiplier) }
         }

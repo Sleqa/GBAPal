@@ -23,6 +23,11 @@ class BaseStats private constructor(private val bySpecies: Map<Int, Entry>) {
         val ability2: Int,
         val hiddenAbility: Int,
     ) {
+        private companion object {
+            /** The value expansion stores in `abilityNum` for a hidden ability. */
+            const val HIDDEN_ABILITY_SLOT = 2
+        }
+
         /**
          * Mirrors CFRU's GetMonAbility() (src/build_pokemon.c): the hidden-ability
          * flag wins if the species actually has one, otherwise personality bit 0
@@ -30,13 +35,17 @@ class BaseStats private constructor(private val bySpecies: Map<Int, Entry>) {
          * ability2).
          *
          * [abilityNum] is the slot the Pokemon actually has stored, when the party
-         * format records one (see Gen3Decrypt.Decoded.abilityNum). It takes
+         * format records one (see Gen3Decrypt.Decoded.abilityNum), with 2
+         * meaning the hidden ability. It takes
          * precedence over personality parity, which is only how the game *picks* a
          * slot at creation time -- breeding and in-game ability changes can leave
          * the stored slot disagreeing with the personality.
          */
         fun abilityId(personality: Long, hiddenAbilityFlag: Boolean, abilityNum: Int? = null): Int {
             if (hiddenAbilityFlag && hiddenAbility != 0) return hiddenAbility
+            // Expansion says "hidden" with a stored slot of 2, where CFRU uses a
+            // separate flag; both arrive here and mean the same thing.
+            if (abilityNum == HIDDEN_ABILITY_SLOT && hiddenAbility != 0) return hiddenAbility
             val secondSlot = abilityNum?.let { it != 0 } ?: ((personality and 1L) != 0L)
             return if (!secondSlot || ability2 == 0) ability1 else ability2
         }

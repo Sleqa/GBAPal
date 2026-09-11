@@ -23,9 +23,9 @@ import com.gbapal.companion.ui.theme.MonoText
 import com.gbapal.companion.ui.theme.MonoTextMuted
 
 /**
- * Full-screen settings overlay: the QOL Mods toggle (heal heart + repel
- * toggle on the hub) and the opponent stat-comparison toggle. More settings
- * can grow here later.
+ * Full-screen settings overlay: QOL Mods (heal heart + repel toggle on the
+ * hub), opponent stat comparison, and the PokeAPI dex lookup. More settings can
+ * grow here later.
  */
 @Composable
 fun SettingsScreen(
@@ -33,6 +33,8 @@ fun SettingsScreen(
     onQolModsChange: (Boolean) -> Unit,
     statCompareEnabled: Boolean,
     onStatCompareChange: (Boolean) -> Unit,
+    dexLookupEnabled: Boolean,
+    onDexLookupChange: (Boolean) -> Unit,
     onClose: () -> Unit,
 ) {
     Box(
@@ -85,6 +87,15 @@ fun SettingsScreen(
                 onToggle = { onStatCompareChange(!statCompareEnabled) },
             )
 
+            SettingToggle(
+                title = "DEX LOOKUP",
+                subtitle = "Tap a move, ability, item or species for a description. " +
+                    "Fetched from PokeAPI over the internet and cached, so each one " +
+                    "is only downloaded once. Off means nothing leaves the device.",
+                enabled = dexLookupEnabled,
+                onToggle = { onDexLookupChange(!dexLookupEnabled) },
+            )
+
         }
     }
 }
@@ -110,7 +121,9 @@ private fun SettingToggle(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column {
+        // Weighted so a subtitle long enough to wrap takes the space it needs
+        // from the row rather than from the ON/OFF beside it.
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
             MonoLabel(text = title, color = MonoText, fontSize = 16.sp)
             MonoLabel(text = subtitle, color = MonoTextMuted, fontSize = 11.sp)
         }
